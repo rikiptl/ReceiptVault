@@ -1,5 +1,7 @@
 import { db } from "@/lib/db";
 import { notFound } from "next/navigation";
+
+export const dynamic = "force-dynamic";
 import Link from "next/link";
 import Image from "next/image";
 import { formatCurrency, formatDate } from "@/lib/utils";

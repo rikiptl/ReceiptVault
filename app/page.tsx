@@ -2,6 +2,8 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
+export const dynamic = "force-dynamic";
+
 async function getStats() {
   const [total, thisMonth, recentReceipts] = await Promise.all([
     db.receipt.count(),

@@ -2,6 +2,8 @@ import { db } from "@/lib/db";
 import Link from "next/link";
 import ReceiptCard from "@/components/ReceiptCard";
 
+export const dynamic = "force-dynamic";
+
 const CATEGORIES = [
   "All",
   "Groceries",
