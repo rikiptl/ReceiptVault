@@ -3,7 +3,7 @@ import { db } from "@/lib/db";
 import { formatCurrency, formatDate } from "@/lib/utils";
 
 async function getStats() {
-  const [total, thisMonth, totalSpend, recentReceipts] = await Promise.all([
+  const [total, thisMonth, recentReceipts] = await Promise.all([
     db.receipt.count(),
     db.receipt.count({
       where: {
@@ -11,9 +11,6 @@ async function getStats() {
           gte: new Date(new Date().getFullYear(), new Date().getMonth(), 1),
         },
       },
-    }),
-    db.receipt.aggregate({
-      _sum: { total: false }, // we'll compute manually
     }),
     db.receipt.findMany({
       orderBy: { createdAt: "desc" },
