@@ -15,8 +15,7 @@ build/
 .env.production.local
 .env.development.local
 
-# Prisma
-prisma/migrations/*.sql
+# Prisma (migrations ARE tracked in git)
 
 # Uploads (local dev)
 uploads/
