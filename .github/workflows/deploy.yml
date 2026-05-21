@@ -58,7 +58,8 @@ jobs:
             # ── 3. Pull latest code ──────────────────────────────────────────
             echo "[3/6] Pulling latest code..."
             if [ ! -d "$APP_DIR/.git" ]; then
-              git clone https://github.com/${{ github.repository }}.git $APP_DIR
+              rm -rf $APP_DIR
+              git clone -b production https://github.com/${{ github.repository }}.git $APP_DIR
             fi
             cd $APP_DIR
             git fetch origin production
