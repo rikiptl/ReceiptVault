@@ -1,0 +1,37 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Receipt {
+  id           String   @id @default(uuid())
+  filename     String
+  originalName String
+  filePath     String
+  mimeType     String
+  fileSize     Int      @default(0)
+
+  // Extracted data
+  merchant     String?
+  date         String?
+  total        String?
+  tax          String?
+  currency     String   @default("USD")
+  category     String?
+  ocrText      String?  @db.Text
+  items        Json?    @default("[]")
+  notes        String?  @db.Text
+
+  // Status
+  verified     Boolean  @default(false)
+  ocrDone      Boolean  @default(false)
+
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("receipts")
+}

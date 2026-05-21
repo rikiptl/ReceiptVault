@@ -1,0 +1,33 @@
+{
+  "name": "receiptvault",
+  "version": "1.0.0",
+  "description": "Track receipts everywhere — OCR powered document management",
+  "private": true,
+  "scripts": {
+    "dev": "next dev -p 3500",
+    "build": "prisma generate && next build",
+    "start": "next start -p 3500",
+    "db:migrate": "prisma migrate deploy",
+    "db:generate": "prisma generate",
+    "db:studio": "prisma studio"
+  },
+  "dependencies": {
+    "next": "^15.3.2",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "@prisma/client": "^6.0.0",
+    "uuid": "^11.0.0",
+    "date-fns": "^4.1.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.0.0",
+    "typescript": "^5",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "@types/node": "^22",
+    "@types/uuid": "^10",
+    "tailwindcss": "^3.4.0",
+    "postcss": "^8",
+    "autoprefixer": "^10"
+  }
+}

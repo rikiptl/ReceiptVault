@@ -1,0 +1,63 @@
+services:
+
+  # ── ReceiptVault App ───────────────────────────────────────────────────────
+  app:
+    build: .
+    ports:
+      - "3500:3500"
+    env_file: .env
+    volumes:
+      - /var/www/receiptvault/uploads:/app/uploads
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+      ocr-service:
+        condition: service_healthy
+    logging:
+      driver: "local"
+      options:
+        max-size: "100M"
+        max-file: "3"
+
+  # ── PostgreSQL Database ────────────────────────────────────────────────────
+  postgres:
+    image: postgres:17-alpine
+    env_file: .env
+    volumes:
+      - /var/www/receiptvault/pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U receiptvault -d receiptvault"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    logging:
+      driver: "local"
+      options:
+        max-size: "50M"
+        max-file: "3"
+
+  # ── Tesseract OCR Service ──────────────────────────────────────────────────
+  ocr-service:
+    build:
+      context: ./ocr-service
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:11435/health')",
+        ]
+      interval: 30s
+      timeout: 10s
+      start_period: 15s
+      retries: 3
+    logging:
+      driver: "local"
+      options:
+        max-size: "50M"
+        max-file: "3"

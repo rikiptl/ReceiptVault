@@ -1,0 +1,116 @@
+name: Deploy ReceiptVault to Vultr
+
+on:
+  push:
+    branches:
+      - production
+  workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+  APP_DIR: /var/www/receiptvault
+
+jobs:
+  deploy:
+    name: Build & Deploy ReceiptVault
+    runs-on: ubuntu-latest
+
+    steps:
+      # ── 1. Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── 2. Deploy via SSH ────────────────────────────────────────────────────
+      - name: Deploy to Vultr
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.VULTR_HOST }}
+          username: ${{ secrets.VULTR_USER }}
+          key: ${{ secrets.VULTR_SSH_KEY }}
+          port: 22
+          timeout: 600s
+          envs: APP_DIR
+          script: |
+            set -e
+            export PATH=$PATH:/usr/local/bin:/usr/bin
+
+            echo "=============================================="
+            echo " ReceiptVault Deployment — $(date)"
+            echo "=============================================="
+
+            # ── 1. Install Docker ────────────────────────────────────────────
+            echo "[1/6] Checking Docker..."
+            if ! command -v docker &>/dev/null; then
+              echo "Installing Docker..."
+              curl -fsSL https://get.docker.com | bash
+              systemctl enable docker && systemctl start docker
+            fi
+            docker --version
+            docker compose version
+
+            # ── 2. Create directories ────────────────────────────────────────
+            echo "[2/6] Creating directories..."
+            mkdir -p $APP_DIR/uploads
+            mkdir -p $APP_DIR/pgdata
+            mkdir -p $APP_DIR/ocr-service
+            chmod -R 755 $APP_DIR
+
+            # ── 3. Pull latest code ──────────────────────────────────────────
+            echo "[3/6] Pulling latest code..."
+            if [ ! -d "$APP_DIR/.git" ]; then
+              git clone https://github.com/${{ github.repository }}.git $APP_DIR
+            fi
+            cd $APP_DIR
+            git fetch origin production
+            git reset --hard origin/production
+
+            # ── 4. Write .env ────────────────────────────────────────────────
+            echo "[4/6] Writing .env..."
+            cat > $APP_DIR/.env << ENVEOF
+            POSTGRES_USER=receiptvault
+            POSTGRES_PASSWORD=${{ secrets.RECEIPTVAULT_DB_PASSWORD }}
+            POSTGRES_DB=receiptvault
+            DATABASE_URL=postgresql://receiptvault:${{ secrets.RECEIPTVAULT_DB_PASSWORD }}@postgres:5432/receiptvault
+            OCR_BASE_URL=http://ocr-service:11435/v1
+            OCR_MODEL=tesseract-ocr
+            UPLOAD_PATH=/app/uploads
+            PORT=3500
+            NODE_ENV=production
+            NEXT_TELEMETRY_DISABLED=1
+            ENVEOF
+            chmod 600 $APP_DIR/.env
+
+            # ── 5. Build & start services ────────────────────────────────────
+            echo "[5/6] Building & starting services..."
+            cd $APP_DIR
+            docker compose build --no-cache
+            docker compose up -d --remove-orphans
+
+            # ── 6. Run DB migrations ─────────────────────────────────────────
+            echo "[6/6] Running database migrations..."
+            sleep 15
+            docker compose exec -T app npx prisma migrate deploy || true
+
+            # ── Firewall ─────────────────────────────────────────────────────
+            ufw allow 3500/tcp || true
+
+            echo "=============================================="
+            docker compose ps
+            echo "=============================================="
+            echo ""
+            echo "✅ ReceiptVault deployed!"
+            echo "   URL: http://${{ secrets.VULTR_HOST }}:3500"
+            echo "=============================================="
+
+      # ── Summary ──────────────────────────────────────────────────────────────
+      - name: Deployment summary
+        if: success()
+        run: |
+          echo "✅ ReceiptVault deployed successfully"
+          echo "   URL: http://${{ secrets.VULTR_HOST }}:3500"
+
+      - name: Deployment failed
+        if: failure()
+        run: |
+          echo "❌ Deployment failed — check logs above"
+          exit 1
