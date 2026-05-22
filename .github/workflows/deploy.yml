@@ -93,15 +93,16 @@ jobs:
             # ── 6. Run DB migrations ─────────────────────────────────────────
             echo "[6/6] Running database migrations..."
             sleep 15
-            # Run migrations via a temporary node container (standalone build strips prisma CLI)
-            DB_URL=$(grep DATABASE_URL $APP_DIR/.env | cut -d= -f2-)
-            docker run --rm \
-              --network receiptvault_default \
-              -e DATABASE_URL="$DB_URL" \
-              -v $APP_DIR/prisma:/app/prisma \
-              node:22-alpine \
-              sh -c "cd /app && npm install -g prisma@6 --silent 2>/dev/null && prisma migrate deploy" || \
-            echo "Migration step completed (table may already exist)"
+            # Apply schema changes idempotently via psql (ALTER TABLE … IF NOT EXISTS)
+            # Prisma migrate deploy breaks when _prisma_migrations doesn't exist, so we
+            # run SQL directly — every column addition uses IF NOT EXISTS for safety.
+            docker compose exec -T postgres psql -U receiptvault -d receiptvault << 'SQLEOF'
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "isRecurring" BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "recurringInterval" TEXT;
+ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "warrantyExpiry" TIMESTAMP(3);
+SQLEOF
+            echo "Migrations applied."
 
             # ── Firewall ─────────────────────────────────────────────────────
             ufw allow 3500/tcp || true
