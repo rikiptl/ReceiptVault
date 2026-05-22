@@ -145,7 +145,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps) {
     if (merged.amountMax)  p.set("amountMax",  String(merged.amountMax));
     if (merged.sort && merged.sort !== "date_desc") p.set("sort", String(merged.sort));
     if (merged.tag)        p.set("tag",        String(merged.tag));
-    if (merged.recurring === "true" || merged.recurring === true) p.set("recurring", "true");
+    if (merged.recurring) p.set("recurring", "true");
     return `/receipts${p.toString() ? "?" + p.toString() : ""}`;
   };
 
