@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { useCallback } from "react";
 
 const CATEGORIES = [
   "Groceries",
@@ -34,6 +35,7 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
   const router = useRouter();
   const [saving, setSaving] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [rerunning, setRerunning] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState("");
 
@@ -82,6 +84,29 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
       setDeleting(false);
     }
   };
+
+  const handleRerunOcr = useCallback(async () => {
+    if (!confirm("Re-run OCR? This will overwrite the current extracted data.")) return;
+    setRerunning(true);
+    setError("");
+    try {
+      await fetch(`/api/receipts/${receipt.id}/ocr`, { method: "POST" });
+      // Poll until done
+      let attempts = 0;
+      while (attempts < 30) {
+        await new Promise((r) => setTimeout(r, 1000));
+        const check = await fetch(`/api/receipts/${receipt.id}`);
+        const data = await check.json();
+        if (data.ocrDone) break;
+        attempts++;
+      }
+      router.refresh();
+    } catch {
+      setError("Re-run OCR failed.");
+    } finally {
+      setRerunning(false);
+    }
+  }, [receipt.id, router]);
 
   return (
     <div className="space-y-4">
@@ -177,7 +202,7 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
         <p className="text-green-600 text-sm">✓ Saved successfully</p>
       )}
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 flex-wrap">
         <button
           onClick={handleSave}
           disabled={saving}
@@ -186,11 +211,22 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
           {saving ? "Saving..." : "Save Changes"}
         </button>
         <button
+          onClick={handleRerunOcr}
+          disabled={rerunning}
+          className="btn-secondary flex items-center gap-1"
+          title="Re-extract data from the original image"
+        >
+          {rerunning ? (
+            <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+          ) : "🔄"}
+          {rerunning ? "Running…" : "Re-run OCR"}
+        </button>
+        <button
           onClick={handleDelete}
           disabled={deleting}
           className="btn-secondary text-red-600 hover:bg-red-50"
         >
-          {deleting ? "..." : "Delete"}
+          {deleting ? "..." : "🗑️"}
         </button>
       </div>
     </div>

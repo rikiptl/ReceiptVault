@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 import Navbar from "@/components/Navbar";
 
@@ -6,6 +6,19 @@ export const metadata: Metadata = {
   title: "ReceiptVault — Track Receipts Everywhere",
   description:
     "Capture receipts, invoices, and more. OCR-powered data extraction, search, and tax export.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "default",
+    title: "ReceiptVault",
+  },
+};
+
+export const viewport: Viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  themeColor: "#16a34a",
 };
 
 export default function RootLayout({
@@ -17,7 +30,10 @@ export default function RootLayout({
     <html lang="en">
       <body className="min-h-screen bg-gray-50">
         <Navbar />
-        <main className="max-w-6xl mx-auto px-4 py-8">{children}</main>
+        {/* pb-16 = room for mobile bottom tab bar */}
+        <main className="max-w-6xl mx-auto px-4 py-6 pb-24 sm:pb-8">
+          {children}
+        </main>
       </body>
     </html>
   );

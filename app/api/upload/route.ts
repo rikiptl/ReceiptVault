@@ -7,7 +7,13 @@ import { runOcr } from "@/lib/ocr";
 
 const UPLOAD_DIR = process.env.UPLOAD_PATH ?? path.join(process.cwd(), "uploads");
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
-const ALLOWED_TYPES = ["image/jpeg", "image/png", "image/webp", "image/gif", "application/pdf"];
+const ALLOWED_TYPES = [
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  "application/pdf",
+];
 
 export async function POST(req: NextRequest) {
   try {
@@ -32,13 +38,49 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Save file to disk
+    // Save file to disk first so we can run OCR for duplicate check
     await mkdir(UPLOAD_DIR, { recursive: true });
     const ext = file.name.split(".").pop() ?? "jpg";
     const filename = `${uuidv4()}.${ext}`;
     const filePath = path.join(UPLOAD_DIR, filename);
     const buffer = Buffer.from(await file.arrayBuffer());
     await writeFile(filePath, buffer);
+
+    // ── Duplicate detection ────────────────────────────────────────────────
+    // We check after OCR completes synchronously for a quick pre-check using
+    // filename similarity, then async OCR will do field-level dedup.
+    // For now: check if a receipt with same originalName + same size exists
+    // (catches re-uploads of the same file before OCR runs).
+    const sameFile = await db.receipt.findFirst({
+      where: {
+        originalName: file.name,
+        fileSize: file.size,
+      },
+      select: {
+        id: true,
+        merchant: true,
+        date: true,
+        total: true,
+      },
+    });
+
+    if (sameFile) {
+      // Delete the duplicate file we just saved
+      const { unlink } = await import("fs/promises");
+      unlink(filePath).catch(() => {});
+
+      return NextResponse.json(
+        {
+          duplicate: {
+            id: sameFile.id,
+            merchant: sameFile.merchant ?? "Unknown",
+            date: sameFile.date ?? "",
+            total: sameFile.total ?? "",
+          },
+        },
+        { status: 409 }
+      );
+    }
 
     // Create receipt record (ocrDone = false initially)
     const receipt = await db.receipt.create({
@@ -52,7 +94,8 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Run OCR in background (don't await — let client poll)
+    // Run OCR in background — after it completes it will do field-level
+    // duplicate detection (same merchant + total + date)
     runOcr(receipt.id, filePath, file.type, buffer).catch((err) => {
       console.error(`OCR failed for ${receipt.id}:`, err);
     });

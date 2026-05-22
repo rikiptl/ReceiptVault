@@ -1,11 +1,11 @@
 import { db } from "./db";
 
-const OCR_BASE_URL =
-  process.env.OCR_BASE_URL ?? "http://localhost:11435/v1";
+const OCR_BASE_URL = process.env.OCR_BASE_URL ?? "http://localhost:11435/v1";
 
 /**
  * Calls the Tesseract OCR microservice (OpenAI-compatible API),
- * parses the structured receipt data, and updates the DB record.
+ * parses the structured receipt data, checks for field-level duplicates,
+ * and updates the DB record.
  */
 export async function runOcr(
   receiptId: string,
@@ -34,7 +34,6 @@ export async function runOcr(
           },
         ],
       }),
-      // 2-minute timeout
       signal: AbortSignal.timeout(120_000),
     });
 
@@ -52,19 +51,42 @@ export async function runOcr(
       console.error("Failed to parse OCR JSON:", rawContent);
     }
 
+    const merchant = (parsed.merchant as string) || null;
+    const date     = (parsed.date as string) || null;
+    const total    = (parsed.total as string) || null;
+
+    // ── Field-level duplicate detection ──────────────────────────────────────
+    // If another receipt already has the same merchant + total + date,
+    // store a note so the UI can flag it. We don't block saving.
+    let dupeNote = "";
+    if (merchant && total && date) {
+      const existing = await db.receipt.findFirst({
+        where: {
+          id:       { not: receiptId },
+          merchant: { equals: merchant, mode: "insensitive" },
+          total,
+          date,
+        },
+        select: { id: true },
+      });
+      if (existing) {
+        dupeNote = `⚠️ Possible duplicate of receipt ${existing.id}`;
+      }
+    }
+
     // Update DB with extracted fields
     await db.receipt.update({
       where: { id: receiptId },
       data: {
-        merchant:    (parsed.merchant as string) || null,
-        date:        (parsed.date as string) || null,
-        total:       (parsed.total as string) || null,
+        merchant,
+        date,
+        total,
         tax:         (parsed.tax as string) || null,
         currency:    (parsed.currency as string) || "USD",
         category:    (parsed.category as string) || null,
         ocrText:     (parsed.description as string) || null,
         items:       Array.isArray(parsed.items) ? parsed.items : [],
-        notes:       (parsed.notes as string) || null,
+        notes:       dupeNote || ((parsed.notes as string) || null),
         ocrDone:     true,
       },
     });
