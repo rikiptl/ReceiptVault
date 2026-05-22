@@ -86,6 +86,12 @@ jobs:
             # ── 5. Build & start services ────────────────────────────────────
             echo "[5/6] Building & starting services..."
             cd $APP_DIR
+
+            # Pre-build: reclaim disk so the build never fails on ENOSPC
+            echo "  Pruning stale Docker build cache and images..."
+            docker builder prune -af || true
+            docker image prune -af  || true
+
             docker compose build --no-cache
             docker compose down --remove-orphans || true
             docker compose up -d --remove-orphans
