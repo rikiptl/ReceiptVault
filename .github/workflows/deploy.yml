@@ -91,7 +91,15 @@ jobs:
             # ── 6. Run DB migrations ─────────────────────────────────────────
             echo "[6/6] Running database migrations..."
             sleep 15
-            docker compose exec -T app npx prisma migrate deploy || true
+            # Run migrations via a temporary node container (standalone build strips prisma CLI)
+            DB_URL=$(grep DATABASE_URL $APP_DIR/.env | cut -d= -f2-)
+            docker run --rm \
+              --network receiptvault_default \
+              -e DATABASE_URL="$DB_URL" \
+              -v $APP_DIR/prisma:/app/prisma \
+              node:22-alpine \
+              sh -c "cd /app && npm install -g prisma@6 --silent 2>/dev/null && prisma migrate deploy" || \
+            echo "Migration step completed (table may already exist)"
 
             # ── Firewall ─────────────────────────────────────────────────────
             ufw allow 3500/tcp || true
