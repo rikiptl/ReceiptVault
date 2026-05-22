@@ -161,7 +161,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Quick actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Link
           href="/receipts"
           className="card hover:shadow-md transition-shadow flex items-center gap-4 cursor-pointer"
@@ -170,6 +170,16 @@ export default async function DashboardPage() {
           <div>
             <p className="font-semibold text-gray-900">Search Receipts</p>
             <p className="text-sm text-gray-500">Find any receipt instantly</p>
+          </div>
+        </Link>
+        <Link
+          href="/analytics"
+          className="card hover:shadow-md transition-shadow flex items-center gap-4 cursor-pointer"
+        >
+          <span className="text-3xl">📊</span>
+          <div>
+            <p className="font-semibold text-gray-900">Analytics</p>
+            <p className="text-sm text-gray-500">Charts & spending insights</p>
           </div>
         </Link>
         <Link

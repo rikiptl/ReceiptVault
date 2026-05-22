@@ -8,6 +8,7 @@ const NAV_LINKS = [
   { href: "/",           label: "Dashboard",  icon: "🏠" },
   { href: "/receipts",   label: "Receipts",   icon: "🧾" },
   { href: "/upload",     label: "Upload",     icon: "📸" },
+  { href: "/analytics",  label: "Analytics",  icon: "📊" },
   { href: "/warranties", label: "Warranties", icon: "🛡️" },
 ];
 
