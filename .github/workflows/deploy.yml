@@ -54,6 +54,8 @@ jobs:
             mkdir -p $APP_DIR/pgdata
             mkdir -p $APP_DIR/ocr-service
             chmod -R 755 $APP_DIR
+            # uploads must be writable by nextjs user (uid 1001) inside container
+            chown -R 1001:1001 $APP_DIR/uploads
 
             # ── 3. Pull latest code ──────────────────────────────────────────
             echo "[3/6] Pulling latest code..."
