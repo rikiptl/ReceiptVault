@@ -26,6 +26,12 @@ model Receipt {
   items        Json?    @default("[]")
   notes        String?  @db.Text
 
+  // Organization
+  tags              String[]
+  isRecurring       Boolean   @default(false)
+  recurringInterval String?
+  warrantyExpiry    DateTime?
+
   // Status
   verified     Boolean  @default(false)
   ocrDone      Boolean  @default(false)

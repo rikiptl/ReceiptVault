@@ -28,6 +28,10 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     "category",
     "notes",
     "verified",
+    "tags",
+    "isRecurring",
+    "recurringInterval",
+    "warrantyExpiry",
   ];
   const data: Record<string, unknown> = {};
   for (const key of allowed) {

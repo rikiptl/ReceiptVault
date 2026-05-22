@@ -1,8 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { useCallback } from "react";
+import TagInput from "@/components/TagInput";
 
 const CATEGORIES = [
   "Groceries",
@@ -19,6 +19,13 @@ const CATEGORIES = [
 
 const CURRENCIES = ["USD", "EUR", "GBP", "JPY", "INR", "AUD", "CAD"];
 
+const RECURRING_INTERVALS = [
+  { value: "weekly",    label: "Weekly" },
+  { value: "monthly",   label: "Monthly" },
+  { value: "quarterly", label: "Quarterly" },
+  { value: "yearly",    label: "Yearly" },
+];
+
 interface Receipt {
   id: string;
   merchant: string | null;
@@ -29,39 +36,62 @@ interface Receipt {
   category: string | null;
   notes: string | null;
   verified: boolean;
+  tags: string[];
+  isRecurring: boolean;
+  recurringInterval: string | null;
+  warrantyExpiry: Date | null;
 }
 
 export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
   const router = useRouter();
-  const [saving, setSaving] = useState(false);
+  const [saving, setSaving]     = useState(false);
   const [deleting, setDeleting] = useState(false);
   const [rerunning, setRerunning] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [error, setError] = useState("");
+  const [saved, setSaved]       = useState(false);
+  const [error, setError]       = useState("");
+  const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
 
   const [form, setForm] = useState({
-    merchant: receipt.merchant ?? "",
-    date: receipt.date ?? "",
-    total: receipt.total ?? "",
-    tax: receipt.tax ?? "",
-    currency: receipt.currency,
-    category: receipt.category ?? "",
-    notes: receipt.notes ?? "",
-    verified: receipt.verified,
+    merchant:          receipt.merchant ?? "",
+    date:              receipt.date ?? "",
+    total:             receipt.total ?? "",
+    tax:               receipt.tax ?? "",
+    currency:          receipt.currency,
+    category:          receipt.category ?? "",
+    notes:             receipt.notes ?? "",
+    verified:          receipt.verified,
+    tags:              receipt.tags ?? [],
+    isRecurring:       receipt.isRecurring ?? false,
+    recurringInterval: receipt.recurringInterval ?? "monthly",
+    warrantyExpiry:    receipt.warrantyExpiry
+      ? new Date(receipt.warrantyExpiry).toISOString().split("T")[0]
+      : "",
   });
 
-  const set = (field: string, value: string | boolean) =>
+  const set = (field: string, value: unknown) =>
     setForm((f) => ({ ...f, [field]: value }));
+
+  // Load tag suggestions
+  useEffect(() => {
+    fetch("/api/tags")
+      .then((r) => r.json())
+      .then(setTagSuggestions)
+      .catch(() => {});
+  }, []);
 
   const handleSave = async () => {
     setSaving(true);
     setError("");
     setSaved(false);
     try {
+      const payload = {
+        ...form,
+        warrantyExpiry: form.warrantyExpiry ? new Date(form.warrantyExpiry).toISOString() : null,
+      };
       const res = await fetch(`/api/receipts/${receipt.id}`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(payload),
       });
       if (!res.ok) throw new Error("Save failed");
       setSaved(true);
@@ -91,7 +121,6 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
     setError("");
     try {
       await fetch(`/api/receipts/${receipt.id}/ocr`, { method: "POST" });
-      // Poll until done
       let attempts = 0;
       while (attempts < 30) {
         await new Promise((r) => setTimeout(r, 1000));
@@ -110,6 +139,7 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
 
   return (
     <div className="space-y-4">
+      {/* ── Core fields ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 gap-3">
         <div>
           <label className="text-xs text-gray-500 block mb-1">Merchant</label>
@@ -154,9 +184,7 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
             value={form.currency}
             onChange={(e) => set("currency", e.target.value)}
           >
-            {CURRENCIES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
+            {CURRENCIES.map((c) => <option key={c}>{c}</option>)}
           </select>
         </div>
         <div>
@@ -167,13 +195,12 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
             onChange={(e) => set("category", e.target.value)}
           >
             <option value="">Select...</option>
-            {CATEGORIES.map((c) => (
-              <option key={c}>{c}</option>
-            ))}
+            {CATEGORIES.map((c) => <option key={c}>{c}</option>)}
           </select>
         </div>
       </div>
 
+      {/* ── Notes ───────────────────────────────────────────────────── */}
       <div>
         <label className="text-xs text-gray-500 block mb-1">Notes</label>
         <textarea
@@ -185,6 +212,68 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
         />
       </div>
 
+      {/* ── Tags ────────────────────────────────────────────────────── */}
+      <div>
+        <label className="text-xs text-gray-500 block mb-1">Tags</label>
+        <TagInput
+          value={form.tags}
+          onChange={(tags) => set("tags", tags)}
+          suggestions={tagSuggestions}
+          placeholder="business, reimbursable, personal…"
+        />
+      </div>
+
+      {/* ── Recurring ───────────────────────────────────────────────── */}
+      <div className="rounded-xl border border-gray-200 p-3 space-y-2">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            className="w-4 h-4 accent-brand-600"
+            checked={form.isRecurring}
+            onChange={(e) => set("isRecurring", e.target.checked)}
+          />
+          <span className="text-sm font-medium text-gray-700">🔁 Recurring subscription</span>
+        </label>
+        {form.isRecurring && (
+          <div>
+            <label className="text-xs text-gray-500 block mb-1">Billing interval</label>
+            <select
+              className="input text-sm"
+              value={form.recurringInterval}
+              onChange={(e) => set("recurringInterval", e.target.value)}
+            >
+              {RECURRING_INTERVALS.map((i) => (
+                <option key={i.value} value={i.value}>{i.label}</option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+
+      {/* ── Warranty ────────────────────────────────────────────────── */}
+      <div className="rounded-xl border border-gray-200 p-3 space-y-2">
+        <p className="text-sm font-medium text-gray-700">🛡️ Warranty / Guarantee</p>
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">Warranty expiry date</label>
+          <input
+            type="date"
+            className="input text-sm"
+            value={form.warrantyExpiry}
+            onChange={(e) => set("warrantyExpiry", e.target.value)}
+          />
+          {form.warrantyExpiry && (
+            <button
+              type="button"
+              onClick={() => set("warrantyExpiry", "")}
+              className="text-xs text-red-500 hover:underline mt-1"
+            >
+              Remove warranty date
+            </button>
+          )}
+        </div>
+      </div>
+
+      {/* ── Verified ────────────────────────────────────────────────── */}
       <label className="flex items-center gap-2 cursor-pointer">
         <input
           type="checkbox"
@@ -195,12 +284,8 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
         <span className="text-sm text-gray-700">Mark as verified</span>
       </label>
 
-      {error && (
-        <p className="text-red-600 text-sm">{error}</p>
-      )}
-      {saved && (
-        <p className="text-green-600 text-sm">✓ Saved successfully</p>
-      )}
+      {error  && <p className="text-red-600 text-sm">{error}</p>}
+      {saved  && <p className="text-green-600 text-sm">✓ Saved successfully</p>}
 
       <div className="flex gap-2 flex-wrap">
         <button
@@ -216,9 +301,9 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
           className="btn-secondary flex items-center gap-1"
           title="Re-extract data from the original image"
         >
-          {rerunning ? (
-            <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
-          ) : "🔄"}
+          {rerunning
+            ? <span className="inline-block w-3 h-3 border-2 border-gray-400 border-t-transparent rounded-full animate-spin" />
+            : "🔄"}
           {rerunning ? "Running…" : "Re-run OCR"}
         </button>
         <button

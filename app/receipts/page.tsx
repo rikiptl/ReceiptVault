@@ -37,20 +37,31 @@ interface PageProps {
     amountMin?: string;
     amountMax?: string;
     sort?: string;
+    tag?: string;
+    recurring?: string;
   }>;
 }
 
 export default async function ReceiptsPage({ searchParams }: PageProps) {
-  const params  = await searchParams;
-  const q         = params.q?.trim() ?? "";
-  const cat       = params.cat ?? "All";
-  const page      = Math.max(1, parseInt(params.page ?? "1", 10));
-  const pageSize  = 12;
-  const dateFrom  = params.dateFrom ?? "";
-  const dateTo    = params.dateTo ?? "";
-  const amountMin = params.amountMin ? parseFloat(params.amountMin) : null;
-  const amountMax = params.amountMax ? parseFloat(params.amountMax) : null;
-  const sort      = params.sort ?? "date_desc";
+  const params     = await searchParams;
+  const q          = params.q?.trim() ?? "";
+  const cat        = params.cat ?? "All";
+  const page       = Math.max(1, parseInt(params.page ?? "1", 10));
+  const pageSize   = 12;
+  const dateFrom   = params.dateFrom ?? "";
+  const dateTo     = params.dateTo ?? "";
+  const amountMin  = params.amountMin ? parseFloat(params.amountMin) : null;
+  const amountMax  = params.amountMax ? parseFloat(params.amountMax) : null;
+  const sort       = params.sort ?? "date_desc";
+  const tag        = params.tag ?? "";
+  const recurring  = params.recurring === "true";
+
+  // ── All distinct tags (for tag filter pills) ───────────────────────────────
+  const allTagRecords = await db.receipt.findMany({
+    select: { tags: true },
+    where: { tags: { isEmpty: false } },
+  });
+  const allTags = Array.from(new Set(allTagRecords.flatMap((r) => r.tags))).sort();
 
   // ── Prisma where clause ────────────────────────────────────────────────────
   const where = {
@@ -69,24 +80,23 @@ export default async function ReceiptsPage({ searchParams }: PageProps) {
         ...(dateTo   ? { lte: new Date(dateTo   + "T23:59:59Z") } : {}),
       },
     } : {}),
+    ...(tag        ? { tags: { has: tag } } : {}),
+    ...(recurring  ? { isRecurring: true }  : {}),
   };
 
-  // ── DB orderBy (for non-amount sorts) ─────────────────────────────────────
+  // ── DB orderBy ────────────────────────────────────────────────────────────
   const dbOrderBy = sort.startsWith("merchant")
     ? { merchant: sort === "merchant_asc" ? "asc" as const : "desc" as const }
     : { createdAt: sort === "date_asc" ? "asc" as const : "desc" as const };
 
-  // Fetch all matching rows (we need to filter/sort by amount in memory)
-  const needsInMemorySort = sort.startsWith("amount");
-  const needsAmountFilter = amountMin !== null || amountMax !== null;
+  const needsInMemorySort   = sort.startsWith("amount");
+  const needsAmountFilter   = amountMin !== null || amountMax !== null;
 
   let receipts;
   let totalCount: number;
 
   if (needsInMemorySort || needsAmountFilter) {
-    // Fetch all and sort/filter in memory
     const all = await db.receipt.findMany({ where, orderBy: dbOrderBy });
-
     const filtered = all.filter((r) => {
       const v = parseFloat(r.total ?? "");
       if (isNaN(v)) return amountMin === null && amountMax === null;
@@ -94,13 +104,11 @@ export default async function ReceiptsPage({ searchParams }: PageProps) {
       if (amountMax !== null && v > amountMax) return false;
       return true;
     });
-
     if (sort === "amount_desc") {
       filtered.sort((a, b) => parseFloat(b.total ?? "0") - parseFloat(a.total ?? "0"));
     } else if (sort === "amount_asc") {
       filtered.sort((a, b) => parseFloat(a.total ?? "0") - parseFloat(b.total ?? "0"));
     }
-
     totalCount = filtered.length;
     receipts   = filtered.slice((page - 1) * pageSize, page * pageSize);
   } else {
@@ -118,21 +126,32 @@ export default async function ReceiptsPage({ searchParams }: PageProps) {
   const totalPages = Math.ceil(totalCount / pageSize);
 
   // Build URL helper preserving all current filters
-  const buildUrl = (overrides: Record<string, string | number | undefined>) => {
+  const buildUrl = (overrides: Record<string, string | number | boolean | undefined>) => {
     const p = new URLSearchParams();
-    const merged = { q, cat, page, dateFrom, dateTo, amountMin: params.amountMin, amountMax: params.amountMax, sort, ...overrides };
-    if (merged.q)         p.set("q",         String(merged.q));
+    const merged = {
+      q, cat, page, dateFrom, dateTo,
+      amountMin: params.amountMin,
+      amountMax: params.amountMax,
+      sort, tag,
+      recurring: recurring ? "true" : undefined,
+      ...overrides,
+    };
+    if (merged.q)          p.set("q",          String(merged.q));
     if (merged.cat && merged.cat !== "All") p.set("cat", String(merged.cat));
     if (Number(merged.page) > 1) p.set("page", String(merged.page));
-    if (merged.dateFrom)  p.set("dateFrom",  String(merged.dateFrom));
-    if (merged.dateTo)    p.set("dateTo",    String(merged.dateTo));
-    if (merged.amountMin) p.set("amountMin", String(merged.amountMin));
-    if (merged.amountMax) p.set("amountMax", String(merged.amountMax));
+    if (merged.dateFrom)   p.set("dateFrom",   String(merged.dateFrom));
+    if (merged.dateTo)     p.set("dateTo",     String(merged.dateTo));
+    if (merged.amountMin)  p.set("amountMin",  String(merged.amountMin));
+    if (merged.amountMax)  p.set("amountMax",  String(merged.amountMax));
     if (merged.sort && merged.sort !== "date_desc") p.set("sort", String(merged.sort));
+    if (merged.tag)        p.set("tag",        String(merged.tag));
+    if (merged.recurring === "true" || merged.recurring === true) p.set("recurring", "true");
     return `/receipts${p.toString() ? "?" + p.toString() : ""}`;
   };
 
-  const hasFilters = q || cat !== "All" || dateFrom || dateTo || amountMin !== null || amountMax !== null || sort !== "date_desc";
+  const hasFilters = q || cat !== "All" || dateFrom || dateTo ||
+    amountMin !== null || amountMax !== null || sort !== "date_desc" ||
+    tag || recurring;
 
   return (
     <div className="space-y-4">
@@ -170,55 +189,35 @@ export default async function ReceiptsPage({ searchParams }: PageProps) {
           )}
         </div>
 
-        {/* Row 2: date + amount + sort */}
+        {/* Date + amount */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div>
             <label className="text-xs text-gray-500 block mb-1">From date</label>
-            <input
-              type="date"
-              name="dateFrom"
-              defaultValue={dateFrom}
-              className="input text-sm"
-            />
+            <input type="date" name="dateFrom" defaultValue={dateFrom} className="input text-sm" />
           </div>
           <div>
             <label className="text-xs text-gray-500 block mb-1">To date</label>
-            <input
-              type="date"
-              name="dateTo"
-              defaultValue={dateTo}
-              className="input text-sm"
-            />
+            <input type="date" name="dateTo" defaultValue={dateTo} className="input text-sm" />
           </div>
           <div>
             <label className="text-xs text-gray-500 block mb-1">Min amount ($)</label>
             <input
-              type="number"
-              name="amountMin"
-              defaultValue={params.amountMin ?? ""}
-              placeholder="0"
-              min="0"
-              step="0.01"
-              className="input text-sm"
+              type="number" name="amountMin" defaultValue={params.amountMin ?? ""}
+              placeholder="0" min="0" step="0.01" className="input text-sm"
             />
           </div>
           <div>
             <label className="text-xs text-gray-500 block mb-1">Max amount ($)</label>
             <input
-              type="number"
-              name="amountMax"
-              defaultValue={params.amountMax ?? ""}
-              placeholder="Any"
-              min="0"
-              step="0.01"
-              className="input text-sm"
+              type="number" name="amountMax" defaultValue={params.amountMax ?? ""}
+              placeholder="Any" min="0" step="0.01" className="input text-sm"
             />
           </div>
         </div>
 
-        {/* Row 3: sort + hidden cat */}
-        <div className="flex items-center gap-3">
-          <div className="flex-1">
+        {/* Sort + recurring toggle */}
+        <div className="flex items-end gap-3 flex-wrap">
+          <div className="flex-1 min-w-[140px]">
             <label className="text-xs text-gray-500 block mb-1">Sort by</label>
             <select name="sort" defaultValue={sort} className="input text-sm">
               {SORT_OPTIONS.map((o) => (
@@ -226,7 +225,18 @@ export default async function ReceiptsPage({ searchParams }: PageProps) {
               ))}
             </select>
           </div>
+          <label className="flex items-center gap-2 cursor-pointer pb-1">
+            <input
+              type="checkbox"
+              name="recurring"
+              value="true"
+              defaultChecked={recurring}
+              className="w-4 h-4 accent-brand-600"
+            />
+            <span className="text-sm text-gray-700">🔁 Recurring only</span>
+          </label>
           <input type="hidden" name="cat" value={cat} />
+          {tag && <input type="hidden" name="tag" value={tag} />}
         </div>
       </form>
 
@@ -246,6 +256,31 @@ export default async function ReceiptsPage({ searchParams }: PageProps) {
           </Link>
         ))}
       </div>
+
+      {/* Tag filter pills (only shown when tags exist) */}
+      {allTags.length > 0 && (
+        <div className="flex flex-wrap gap-2 items-center">
+          <span className="text-xs text-gray-400 font-medium uppercase tracking-wide">Tags:</span>
+          {allTags.map((t) => (
+            <Link
+              key={t}
+              href={buildUrl({ tag: tag === t ? "" : t, page: 1 })}
+              className={`px-2.5 py-1 rounded-full text-xs font-medium transition-colors border ${
+                tag === t
+                  ? "bg-gray-800 text-white border-gray-800"
+                  : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+              }`}
+            >
+              {t}
+            </Link>
+          ))}
+          {tag && (
+            <Link href={buildUrl({ tag: "", page: 1 })} className="text-xs text-gray-400 hover:text-gray-600 underline">
+              clear tag
+            </Link>
+          )}
+        </div>
+      )}
 
       {/* Results */}
       {receipts.length === 0 ? (

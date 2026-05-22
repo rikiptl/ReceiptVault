@@ -5,9 +5,10 @@ import { usePathname } from "next/navigation";
 import { useState } from "react";
 
 const NAV_LINKS = [
-  { href: "/",          label: "Dashboard", icon: "🏠" },
-  { href: "/receipts",  label: "Receipts",  icon: "🧾" },
-  { href: "/upload",    label: "Upload",    icon: "📸" },
+  { href: "/",           label: "Dashboard",  icon: "🏠" },
+  { href: "/receipts",   label: "Receipts",   icon: "🧾" },
+  { href: "/upload",     label: "Upload",     icon: "📸" },
+  { href: "/warranties", label: "Warranties", icon: "🛡️" },
 ];
 
 export default function Navbar() {
@@ -111,13 +112,6 @@ export default function Navbar() {
             {l.label}
           </Link>
         ))}
-        <a
-          href="/api/export?format=csv"
-          className="flex-1 flex flex-col items-center justify-center py-2 text-xs text-gray-500"
-        >
-          <span className="text-xl mb-0.5">📥</span>
-          Export
-        </a>
       </div>
     </>
   );
