@@ -10,6 +10,7 @@ const NAV_LINKS = [
   { href: "/upload",     label: "Upload",     icon: "📸" },
   { href: "/analytics",  label: "Analytics",  icon: "📊" },
   { href: "/warranties", label: "Warranties", icon: "🛡️" },
+  { href: "/export",     label: "Export",     icon: "📤" },
 ];
 
 export default function Navbar() {

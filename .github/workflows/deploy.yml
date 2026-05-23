@@ -106,7 +106,8 @@ jobs:
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';" \
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"isRecurring\" BOOLEAN NOT NULL DEFAULT false;" \
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"recurringInterval\" TEXT;" \
-              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"warrantyExpiry\" TIMESTAMP(3);"
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"warrantyExpiry\" TIMESTAMP(3);" \
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"reimbursable\" BOOLEAN NOT NULL DEFAULT false;"
             echo "Migrations applied."
 
             # ── Firewall ─────────────────────────────────────────────────────

@@ -30,6 +30,7 @@ interface Receipt {
   tags: string[];
   isRecurring: boolean;
   warrantyExpiry: Date | null;
+  reimbursable: boolean;
 }
 
 interface Props {
@@ -100,6 +101,9 @@ export default function ReceiptCard({ receipt: r, query = "" }: Props) {
             {r.date ?? formatDate(r.createdAt.toISOString())}
           </p>
           <div className="flex gap-1 items-center flex-wrap justify-end">
+            {r.reimbursable && (
+              <span className="badge bg-emerald-50 text-emerald-700" title="Reimbursable">💰</span>
+            )}
             {r.isRecurring && (
               <span className="badge bg-indigo-50 text-indigo-700" title="Recurring">🔁</span>
             )}

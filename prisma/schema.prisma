@@ -31,6 +31,7 @@ model Receipt {
   isRecurring       Boolean   @default(false)
   recurringInterval String?
   warrantyExpiry    DateTime?
+  reimbursable      Boolean   @default(false)
 
   // Status
   verified     Boolean  @default(false)

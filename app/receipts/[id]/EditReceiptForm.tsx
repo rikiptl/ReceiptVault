@@ -40,6 +40,7 @@ interface Receipt {
   isRecurring: boolean;
   recurringInterval: string | null;
   warrantyExpiry: Date | null;
+  reimbursable: boolean;
 }
 
 export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
@@ -66,6 +67,7 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
     warrantyExpiry:    receipt.warrantyExpiry
       ? new Date(receipt.warrantyExpiry).toISOString().split("T")[0]
       : "",
+    reimbursable:      receipt.reimbursable ?? false,
   });
 
   const set = (field: string, value: unknown) =>
@@ -248,6 +250,22 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
             </select>
           </div>
         )}
+      </div>
+
+      {/* ── Reimbursable ────────────────────────────────────────────── */}
+      <div className="rounded-xl border border-gray-200 p-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            className="w-4 h-4 accent-brand-600"
+            checked={form.reimbursable}
+            onChange={(e) => set("reimbursable", e.target.checked)}
+          />
+          <div>
+            <p className="text-sm font-medium text-gray-700">💰 Reimbursable expense</p>
+            <p className="text-xs text-gray-400 mt-0.5">Include in reimbursable export reports</p>
+          </div>
+        </label>
       </div>
 
       {/* ── Warranty ────────────────────────────────────────────────── */}
