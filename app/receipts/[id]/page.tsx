@@ -3,9 +3,9 @@ import { notFound } from "next/navigation";
 
 export const dynamic = "force-dynamic";
 import Link from "next/link";
-import Image from "next/image";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import EditReceiptForm from "./EditReceiptForm";
+import ReceiptImageViewer from "@/components/ReceiptImageViewer";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -15,9 +15,6 @@ export default async function ReceiptDetailPage({ params }: PageProps) {
   const { id } = await params;
   const receipt = await db.receipt.findUnique({ where: { id } });
   if (!receipt) notFound();
-
-  const isImage = receipt.mimeType.startsWith("image/");
-  const isPdf = receipt.mimeType === "application/pdf";
 
   const items = Array.isArray(receipt.items)
     ? (receipt.items as { name: string; total: string }[])
@@ -43,31 +40,12 @@ export default async function ReceiptDetailPage({ params }: PageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
         {/* Left: Receipt image */}
         <div className="space-y-4">
-          <div className="card p-4 flex flex-col items-center">
-            {isImage ? (
-              <div className="relative w-full" style={{ minHeight: 400 }}>
-                <Image
-                  src={`/api/files/${receipt.filename}`}
-                  alt={receipt.originalName}
-                  fill
-                  className="object-contain rounded-lg"
-                  unoptimized
-                />
-              </div>
-            ) : isPdf ? (
-              <div className="w-full">
-                <iframe
-                  src={`/api/files/${receipt.filename}`}
-                  className="w-full h-[600px] rounded-lg border"
-                  title="Receipt PDF"
-                />
-              </div>
-            ) : (
-              <div className="text-center py-12 text-gray-400">
-                <p className="text-4xl mb-2">📄</p>
-                <p>Preview not available</p>
-              </div>
-            )}
+          <div className="card p-4">
+            <ReceiptImageViewer
+              src={`/api/files/${receipt.filename}`}
+              alt={receipt.originalName}
+              mimeType={receipt.mimeType}
+            />
           </div>
 
           {/* OCR Text */}
