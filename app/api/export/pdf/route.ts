@@ -264,7 +264,7 @@ export async function GET(req: NextRequest) {
     const parts  = [year ?? "all", reimbursable ? "reimbursable" : "", cat].filter(Boolean);
     const filename = `receiptvault-tax-${parts.join("-")}.pdf`;
 
-    return new NextResponse(pdf, {
+    return new NextResponse(new Uint8Array(pdf), {
       headers: {
         "Content-Type":        "application/pdf",
         "Content-Disposition": `attachment; filename="${filename}"`,
