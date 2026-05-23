@@ -19,11 +19,6 @@ const nextConfig: NextConfig = {
     serverActions: {
       bodySizeLimit: "10mb",
     },
-    // Ensure pdfkit's non-JS data files (*.afm, *.js, images) are copied
-    // into the standalone build so the runtime can read them.
-    outputFileTracingIncludes: {
-      "/api/export/pdf": ["./node_modules/pdfkit/**/*"],
-    },
   },
 };
 

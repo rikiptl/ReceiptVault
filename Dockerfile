@@ -33,6 +33,9 @@ COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
 COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# pdfkit reads AFM font metrics at runtime via __dirname; the standalone
+# tracer misses these dynamic fs.readFileSync paths, so copy explicitly.
+COPY --from=builder /app/node_modules/pdfkit ./node_modules/pdfkit
 
 # Uploads directory
 RUN mkdir -p /app/uploads && chown nextjs:nodejs /app/uploads
