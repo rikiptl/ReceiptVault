@@ -102,12 +102,11 @@ jobs:
             # Apply schema changes idempotently via psql (ALTER TABLE … IF NOT EXISTS)
             # Prisma migrate deploy breaks when _prisma_migrations doesn't exist, so we
             # run SQL directly — every column addition uses IF NOT EXISTS for safety.
-            docker compose exec -T postgres psql -U receiptvault -d receiptvault << 'SQLEOF'
-ALTER TABLE receipts ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';
-ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "isRecurring" BOOLEAN NOT NULL DEFAULT false;
-ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "recurringInterval" TEXT;
-ALTER TABLE receipts ADD COLUMN IF NOT EXISTS "warrantyExpiry" TIMESTAMP(3);
-SQLEOF
+            docker compose exec -T postgres psql -U receiptvault -d receiptvault \
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS tags TEXT[] NOT NULL DEFAULT '{}';" \
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"isRecurring\" BOOLEAN NOT NULL DEFAULT false;" \
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"recurringInterval\" TEXT;" \
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"warrantyExpiry\" TIMESTAMP(3);"
             echo "Migrations applied."
 
             # ── Firewall ─────────────────────────────────────────────────────
