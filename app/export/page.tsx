@@ -126,15 +126,13 @@ export default async function ExportPage({ searchParams }: PageProps) {
         {/* Category */}
         <div>
           <label className="text-xs text-gray-500 block mb-1.5 font-medium">Category</label>
-          <select
-            name="cat"
-            defaultValue={cat}
-            className="input text-sm"
-            onChange={(e) => (e.currentTarget.form as HTMLFormElement).submit()}
-          >
-            <option value="">All categories</option>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
-          </select>
+          <div className="flex gap-2">
+            <select name="cat" defaultValue={cat} className="input text-sm flex-1">
+              <option value="">All categories</option>
+              {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+            </select>
+            <button type="submit" className="btn-secondary text-sm px-4">Apply</button>
+          </div>
         </div>
 
         {/* Reimbursable toggle */}
