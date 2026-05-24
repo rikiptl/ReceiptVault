@@ -41,6 +41,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     "confidence",
     "paymentMethod",
     "storePhone",
+    "projectId",
   ];
   const data: Record<string, unknown> = {};
   for (const key of allowed) {

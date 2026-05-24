@@ -14,6 +14,7 @@ interface PageProps {
     year?: string;
     reimbursable?: string;
     cat?: string;
+    projectId?: string;
   }>;
 }
 
@@ -32,8 +33,12 @@ export default async function ExportPage({ searchParams }: PageProps) {
   const year         = params.year ?? String(new Date().getFullYear());
   const reimbursable = params.reimbursable === "true";
   const cat          = params.cat ?? "";
+  const projectId    = params.projectId ?? "";
 
-  const years = await getYears();
+  const [years, projects] = await Promise.all([
+    getYears(),
+    db.project.findMany({ orderBy: { name: "asc" }, select: { id: true, name: true, icon: true } }),
+  ]);
 
   // Count receipts matching current filters
   const where = {
@@ -44,7 +49,8 @@ export default async function ExportPage({ searchParams }: PageProps) {
       },
     } : {}),
     ...(reimbursable ? { reimbursable: true } : {}),
-    ...(cat ? { category: cat } : {}),
+    ...(cat       ? { category:  cat       } : {}),
+    ...(projectId ? { projectId: projectId } : {}),
   };
 
   const [count, totalReceipts, reimbCount] = await Promise.all([
@@ -53,23 +59,32 @@ export default async function ExportPage({ searchParams }: PageProps) {
     db.receipt.count({ where: { reimbursable: true } }),
   ]);
 
-  // Sum totals for matched receipts (stored as string, must aggregate in JS)
-  const matched = await db.receipt.findMany({ where, select: { total: true, reimbursable: true } });
+  // Sum totals + build category breakdown
+  const matched = await db.receipt.findMany({
+    where,
+    select: { total: true, reimbursable: true, category: true },
+  });
   let matchedSpend = 0;
   let matchedReimb = 0;
+  const catBreakdown: Record<string, number> = {};
   for (const r of matched) {
     const v = parseFloat(r.total ?? "");
-    if (!isNaN(v)) {
+    if (!isNaN(v) && v > 0) {
       matchedSpend += v;
       if (r.reimbursable) matchedReimb += v;
+      const c = r.category ?? "Other";
+      catBreakdown[c] = (catBreakdown[c] ?? 0) + v;
     }
   }
+  const catRows = Object.entries(catBreakdown)
+    .sort((a, b) => b[1] - a[1]);
 
   // Build export URL params
   const exportParams = new URLSearchParams();
   if (year !== "all") exportParams.set("year", year);
   if (reimbursable)   exportParams.set("reimbursable", "true");
   if (cat)            exportParams.set("cat", cat);
+  if (projectId)      exportParams.set("projectId", projectId);
   const qs = exportParams.toString();
 
   return (
@@ -134,6 +149,22 @@ export default async function ExportPage({ searchParams }: PageProps) {
             <button type="submit" className="btn-secondary text-sm px-4">Apply</button>
           </div>
         </div>
+
+        {/* Project filter */}
+        {projects.length > 0 && (
+          <div>
+            <label className="text-xs text-gray-500 block mb-1.5 font-medium">Project</label>
+            <div className="flex gap-2">
+              <select name="projectId" defaultValue={projectId} className="input text-sm flex-1">
+                <option value="">All projects</option>
+                {projects.map((p) => (
+                  <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
+                ))}
+              </select>
+              <button type="submit" className="btn-secondary text-sm px-4">Apply</button>
+            </div>
+          </div>
+        )}
 
         {/* Reimbursable toggle */}
         <div className="flex items-center gap-3 p-3 rounded-xl border border-gray-200 bg-gray-50">
@@ -218,6 +249,47 @@ export default async function ExportPage({ searchParams }: PageProps) {
             </div>
             <span className="text-gray-500 font-bold text-sm">CSV ↓</span>
           </a>
+        </div>
+      )}
+
+      {/* ── Tax Year Summary ─────────────────────────────────────────── */}
+      {catRows.length > 0 && (
+        <div className="card space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="font-semibold text-gray-900">
+                📋 {year === "all" ? "All-time" : `${year} Tax Year`} Summary
+              </h2>
+              <p className="text-xs text-gray-400 mt-0.5">
+                {count} receipts · ${matchedSpend.toFixed(2)} total
+              </p>
+            </div>
+          </div>
+          <div className="space-y-2.5">
+            {catRows.map(([c, spend]) => {
+              const pct = matchedSpend > 0 ? Math.round((spend / matchedSpend) * 100) : 0;
+              return (
+                <div key={c}>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-gray-700">{c}</span>
+                    <span className="font-semibold text-gray-900">
+                      ${spend.toFixed(2)}
+                      <span className="text-gray-400 font-normal ml-1.5">{pct}%</span>
+                    </span>
+                  </div>
+                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-brand-500 rounded-full" style={{ width: `${pct}%` }} />
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+          {matchedReimb > 0 && (
+            <div className="flex items-center justify-between bg-emerald-50 rounded-xl px-3 py-2.5 mt-2">
+              <span className="text-sm text-emerald-700 font-medium">💰 Reimbursable</span>
+              <span className="font-bold text-emerald-700">${matchedReimb.toFixed(2)}</span>
+            </div>
+          )}
         </div>
       )}
 

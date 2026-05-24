@@ -30,6 +30,7 @@ async function getStats() {
     lastMonthReceipts,
     warrantyAlerts,
     budgets,
+    unverifiedCount,
     pendingReturns,
   ] = await Promise.all([
     db.receipt.count(),
@@ -52,6 +53,8 @@ async function getStats() {
       orderBy: { warrantyExpiry: "asc" },
     }),
     db.budget.findMany({ orderBy: { category: "asc" } }),
+    // Unverified receipts (OCR done but not verified)
+    db.receipt.count({ where: { verified: false, ocrDone: true } }),
     // Pending returns
     db.receipt.findMany({
       where: { returnStatus: "pending" },
@@ -129,6 +132,7 @@ async function getStats() {
     thisMonthSpendByCat,
     trendData,
     pendingReturns,
+    unverifiedCount,
   };
 }
 
@@ -142,6 +146,7 @@ export default async function DashboardPage() {
     thisMonthSpendByCat,
     trendData,
     pendingReturns,
+    unverifiedCount,
   } = await getStats();
 
   const stats = [
@@ -260,6 +265,27 @@ export default async function DashboardPage() {
           </div>
         );
       })()}
+
+      {/* ── Unverified inbox ─────────────────────────────────────────── */}
+      {unverifiedCount > 0 && (
+        <div className="flex items-center gap-3 p-4 rounded-xl bg-indigo-50 border border-indigo-200">
+          <span className="text-2xl shrink-0">📥</span>
+          <div className="flex-1">
+            <p className="font-semibold text-indigo-800 text-sm">
+              {unverifiedCount} receipt{unverifiedCount !== 1 ? "s" : ""} need review
+            </p>
+            <p className="text-xs text-indigo-600 mt-0.5">
+              OCR extracted data — verify amounts and categories are correct
+            </p>
+          </div>
+          <Link
+            href="/receipts?verified=false"
+            className="shrink-0 text-xs font-semibold text-indigo-700 hover:text-indigo-900 bg-indigo-100 hover:bg-indigo-200 px-3 py-1.5 rounded-lg transition-colors"
+          >
+            Review →
+          </Link>
+        </div>
+      )}
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">

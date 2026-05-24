@@ -38,6 +38,9 @@ model Receipt {
   warrantyExpiry    DateTime?
   reimbursable      Boolean   @default(false)
 
+  // Project/folder
+  projectId         String?
+
   // Return tracking
   returnDeadline    DateTime?
   returnStatus      String?   // "pending" | "completed" | "waived"
@@ -57,6 +60,18 @@ model Receipt {
   @@index([reimbursable])
   @@index([returnStatus])
   @@map("receipts")
+}
+
+model Project {
+  id          String   @id @default(uuid())
+  name        String
+  description String?  @db.Text
+  color       String   @default("#22c55e")
+  icon        String   @default("📁")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("projects")
 }
 
 model Budget {

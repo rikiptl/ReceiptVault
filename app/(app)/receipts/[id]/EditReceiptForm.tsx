@@ -44,6 +44,13 @@ interface Receipt {
   returnDeadline: Date | null;
   returnStatus: string | null;
   returnNotes: string | null;
+  projectId: string | null;
+}
+
+interface Project {
+  id: string;
+  name: string;
+  icon: string;
 }
 
 export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
@@ -54,6 +61,7 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
   const [saved, setSaved]       = useState(false);
   const [error, setError]       = useState("");
   const [tagSuggestions, setTagSuggestions] = useState<string[]>([]);
+  const [projects, setProjects] = useState<Project[]>([]);
 
   const [form, setForm] = useState({
     merchant:          receipt.merchant ?? "",
@@ -77,16 +85,21 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
       : "",
     returnStatus:      receipt.returnStatus ?? "pending",
     returnNotes:       receipt.returnNotes ?? "",
+    projectId:         receipt.projectId ?? "",
   });
 
   const set = (field: string, value: unknown) =>
     setForm((f) => ({ ...f, [field]: value }));
 
-  // Load tag suggestions
+  // Load tag suggestions + projects
   useEffect(() => {
     fetch("/api/tags")
       .then((r) => r.json())
       .then(setTagSuggestions)
+      .catch(() => {});
+    fetch("/api/projects")
+      .then((r) => r.json())
+      .then((data) => setProjects(Array.isArray(data) ? data : []))
       .catch(() => {});
   }, []);
 
@@ -98,6 +111,7 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
       const payload = {
         ...form,
         warrantyExpiry:  form.warrantyExpiry  ? new Date(form.warrantyExpiry).toISOString()  : null,
+        projectId:       form.projectId || null,
         returnStatus:    form.hasReturn ? form.returnStatus  : null,
         returnDeadline:  form.hasReturn && form.returnDeadline
           ? new Date(form.returnDeadline).toISOString()
@@ -410,6 +424,23 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
         />
         <span className="text-sm text-gray-700">Mark as verified</span>
       </label>
+
+      {/* ── Project ─────────────────────────────────────────────────── */}
+      {projects.length > 0 && (
+        <div>
+          <label className="text-xs text-gray-500 block mb-1">📁 Project / Folder</label>
+          <select
+            className="input text-sm"
+            value={form.projectId}
+            onChange={(e) => set("projectId", e.target.value)}
+          >
+            <option value="">— No project —</option>
+            {projects.map((p) => (
+              <option key={p.id} value={p.id}>{p.icon} {p.name}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {error  && <p className="text-red-600 text-sm">{error}</p>}
       {saved  && <p className="text-green-600 text-sm">✓ Saved successfully</p>}
