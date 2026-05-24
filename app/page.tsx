@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import MonthlyTrend from "@/components/charts/MonthlyTrend";
 
 export const dynamic = "force-dynamic";
 
@@ -59,6 +60,8 @@ async function getStats() {
   const categoryMap: Record<string, number> = {};
   const thisMonthSpendByCat: Record<string, number> = {};
 
+  const byMonthKey: Record<string, number> = {};
+
   for (const r of allReceipts) {
     const v = parseFloat(r.total ?? "");
     if (isNaN(v) || v <= 0) continue;
@@ -72,7 +75,22 @@ async function getStats() {
 
     const cat = r.category ?? "Other";
     categoryMap[cat] = (categoryMap[cat] ?? 0) + 1;
+
+    // 6-month rolling trend
+    const d   = r.createdAt;
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    byMonthKey[key] = (byMonthKey[key] ?? 0) + v;
   }
+
+  // Build last 6 months trend array
+  const trendData = Array.from({ length: 6 }, (_, i) => {
+    const d   = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
+    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    return {
+      month: d.toLocaleString("en-US", { month: "short", year: "2-digit" }),
+      total: Math.round((byMonthKey[key] ?? 0) * 100) / 100,
+    };
+  });
 
   for (const r of lastMonthReceipts) {
     const v = parseFloat(r.total ?? "");
@@ -101,6 +119,7 @@ async function getStats() {
     warrantyAlerts,
     budgets,
     thisMonthSpendByCat,
+    trendData,
   };
 }
 
@@ -112,6 +131,7 @@ export default async function DashboardPage() {
     warrantyAlerts,
     budgets,
     thisMonthSpendByCat,
+    trendData,
   } = await getStats();
 
   const stats = [
@@ -212,6 +232,22 @@ export default async function DashboardPage() {
           </div>
         ))}
       </div>
+
+      {/* ── Spending trend (6 months) ─────────────────────────────────── */}
+      {trendData.some((d) => d.total > 0) && (
+        <div className="card space-y-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-semibold text-gray-900">📈 Spending Trend</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Last 6 months</p>
+            </div>
+            <Link href="/analytics" className="text-sm text-brand-600 hover:text-brand-700 font-medium">
+              Full analytics →
+            </Link>
+          </div>
+          <MonthlyTrend data={trendData} />
+        </div>
+      )}
 
       {/* ── Budget overview ───────────────────────────────────────────── */}
       {budgets.length > 0 && (
