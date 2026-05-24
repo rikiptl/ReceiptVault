@@ -20,6 +20,15 @@ export default async function ReceiptDetailPage({ params }: PageProps) {
     ? (receipt.items as { name: string; total: string }[])
     : [];
 
+  // New fields added via raw SQL migration — extract with runtime type guards
+  // so TypeScript treats them as concrete types rather than `unknown`.
+  const receiptAny    = receipt as Record<string, unknown>;
+  const confidence    = typeof receiptAny.confidence    === "number" ? receiptAny.confidence    : null;
+  const paymentMethod = typeof receiptAny.paymentMethod === "string" ? receiptAny.paymentMethod : null;
+  const subtotal      = typeof receiptAny.subtotal      === "string" ? receiptAny.subtotal      : null;
+  const tip           = typeof receiptAny.tip           === "string" ? receiptAny.tip           : null;
+  const storePhone    = typeof receiptAny.storePhone    === "string" ? receiptAny.storePhone    : null;
+
   return (
     <div className="space-y-6">
       {/* Breadcrumb */}
@@ -74,20 +83,20 @@ export default async function ReceiptDetailPage({ params }: PageProps) {
               <span className="badge bg-blue-50 text-blue-700">✓ Verified</span>
             )}
             {/* Confidence badge */}
-            {receipt.ocrDone && receipt.confidence != null && (
+            {receipt.ocrDone && confidence != null && (
               <span className={`badge ${
-                receipt.confidence >= 80 ? "bg-green-50 text-green-700" :
-                receipt.confidence >= 50 ? "bg-yellow-50 text-yellow-700" :
-                                           "bg-red-50 text-red-600"
+                confidence >= 80 ? "bg-green-50 text-green-700" :
+                confidence >= 50 ? "bg-yellow-50 text-yellow-700" :
+                                   "bg-red-50 text-red-600"
               }`}>
-                {receipt.confidence >= 80 ? "🎯" : receipt.confidence >= 50 ? "⚠️" : "❗"}{" "}
-                {receipt.confidence}% confidence
+                {confidence >= 80 ? "🎯" : confidence >= 50 ? "⚠️" : "❗"}{" "}
+                {confidence}% confidence
               </span>
             )}
             {/* Payment method */}
-            {(receipt as Record<string,unknown>).paymentMethod && (
+            {paymentMethod && (
               <span className="badge bg-gray-50 text-gray-600">
-                💳 {(receipt as Record<string,unknown>).paymentMethod as string}
+                💳 {paymentMethod}
               </span>
             )}
           </div>
@@ -114,19 +123,19 @@ export default async function ReceiptDetailPage({ params }: PageProps) {
                 {receipt.tax ? formatCurrency(receipt.tax, receipt.currency) : "—"}
               </p>
             </div>
-            {(receipt as Record<string,unknown>).subtotal && (
+            {subtotal && (
               <div>
                 <p className="text-xs text-gray-400 uppercase tracking-wide">Subtotal</p>
                 <p className="font-semibold text-gray-900 mt-0.5">
-                  {formatCurrency((receipt as Record<string,unknown>).subtotal as string, receipt.currency)}
+                  {formatCurrency(subtotal, receipt.currency)}
                 </p>
               </div>
             )}
-            {(receipt as Record<string,unknown>).tip && (
+            {tip && (
               <div>
                 <p className="text-xs text-gray-400 uppercase tracking-wide">Tip</p>
                 <p className="font-semibold text-gray-900 mt-0.5">
-                  {formatCurrency((receipt as Record<string,unknown>).tip as string, receipt.currency)}
+                  {formatCurrency(tip, receipt.currency)}
                 </p>
               </div>
             )}
@@ -138,11 +147,11 @@ export default async function ReceiptDetailPage({ params }: PageProps) {
               <p className="text-xs text-gray-400 uppercase tracking-wide">Currency</p>
               <p className="font-semibold text-gray-900 mt-0.5">{receipt.currency}</p>
             </div>
-            {(receipt as Record<string,unknown>).storePhone && (
+            {storePhone && (
               <div className="col-span-2">
                 <p className="text-xs text-gray-400 uppercase tracking-wide">Store Phone</p>
                 <p className="font-semibold text-gray-900 mt-0.5">
-                  📞 {(receipt as Record<string,unknown>).storePhone as string}
+                  📞 {storePhone}
                 </p>
               </div>
             )}
