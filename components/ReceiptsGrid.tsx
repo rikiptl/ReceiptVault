@@ -25,6 +25,9 @@ interface Receipt {
   isRecurring: boolean;
   warrantyExpiry: Date | null;
   reimbursable: boolean;
+  confidence: number | null;
+  paymentMethod: string | null;
+  returnStatus: string | null;
 }
 
 interface Props {

@@ -64,19 +64,30 @@ export default async function ReceiptDetailPage({ params }: PageProps) {
         {/* Right: Extracted data + edit form */}
         <div className="space-y-4">
           {/* Status badges */}
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             {receipt.ocrDone ? (
-              <span className="badge bg-green-50 text-green-700">
-                ✓ OCR Complete
-              </span>
+              <span className="badge bg-green-50 text-green-700">✓ OCR Complete</span>
             ) : (
-              <span className="badge bg-yellow-50 text-yellow-700">
-                ⏳ Processing...
-              </span>
+              <span className="badge bg-yellow-50 text-yellow-700">⏳ Processing…</span>
             )}
             {receipt.verified && (
-              <span className="badge bg-blue-50 text-blue-700">
-                ✓ Verified
+              <span className="badge bg-blue-50 text-blue-700">✓ Verified</span>
+            )}
+            {/* Confidence badge */}
+            {receipt.ocrDone && receipt.confidence != null && (
+              <span className={`badge ${
+                receipt.confidence >= 80 ? "bg-green-50 text-green-700" :
+                receipt.confidence >= 50 ? "bg-yellow-50 text-yellow-700" :
+                                           "bg-red-50 text-red-600"
+              }`}>
+                {receipt.confidence >= 80 ? "🎯" : receipt.confidence >= 50 ? "⚠️" : "❗"}{" "}
+                {receipt.confidence}% confidence
+              </span>
+            )}
+            {/* Payment method */}
+            {(receipt as Record<string,unknown>).paymentMethod && (
+              <span className="badge bg-gray-50 text-gray-600">
+                💳 {(receipt as Record<string,unknown>).paymentMethod as string}
               </span>
             )}
           </div>
@@ -84,57 +95,57 @@ export default async function ReceiptDetailPage({ params }: PageProps) {
           {/* Key data */}
           <div className="card grid grid-cols-2 gap-4">
             <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide">
-                Merchant
-              </p>
-              <p className="font-semibold text-gray-900 mt-0.5">
-                {receipt.merchant ?? "—"}
-              </p>
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Merchant</p>
+              <p className="font-semibold text-gray-900 mt-0.5">{receipt.merchant ?? "—"}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide">
-                Date
-              </p>
-              <p className="font-semibold text-gray-900 mt-0.5">
-                {receipt.date ?? "—"}
-              </p>
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Date</p>
+              <p className="font-semibold text-gray-900 mt-0.5">{receipt.date ?? "—"}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide">
-                Total
-              </p>
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Total</p>
               <p className="font-semibold text-gray-900 mt-0.5 text-lg">
-                {receipt.total
-                  ? formatCurrency(receipt.total, receipt.currency)
-                  : "—"}
+                {receipt.total ? formatCurrency(receipt.total, receipt.currency) : "—"}
               </p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide">
-                Tax
-              </p>
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Tax</p>
               <p className="font-semibold text-gray-900 mt-0.5">
-                {receipt.tax
-                  ? formatCurrency(receipt.tax, receipt.currency)
-                  : "—"}
+                {receipt.tax ? formatCurrency(receipt.tax, receipt.currency) : "—"}
               </p>
+            </div>
+            {(receipt as Record<string,unknown>).subtotal && (
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wide">Subtotal</p>
+                <p className="font-semibold text-gray-900 mt-0.5">
+                  {formatCurrency((receipt as Record<string,unknown>).subtotal as string, receipt.currency)}
+                </p>
+              </div>
+            )}
+            {(receipt as Record<string,unknown>).tip && (
+              <div>
+                <p className="text-xs text-gray-400 uppercase tracking-wide">Tip</p>
+                <p className="font-semibold text-gray-900 mt-0.5">
+                  {formatCurrency((receipt as Record<string,unknown>).tip as string, receipt.currency)}
+                </p>
+              </div>
+            )}
+            <div>
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Category</p>
+              <p className="font-semibold text-gray-900 mt-0.5">{receipt.category ?? "—"}</p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide">
-                Category
-              </p>
-              <p className="font-semibold text-gray-900 mt-0.5">
-                {receipt.category ?? "—"}
-              </p>
+              <p className="text-xs text-gray-400 uppercase tracking-wide">Currency</p>
+              <p className="font-semibold text-gray-900 mt-0.5">{receipt.currency}</p>
             </div>
-            <div>
-              <p className="text-xs text-gray-400 uppercase tracking-wide">
-                Currency
-              </p>
-              <p className="font-semibold text-gray-900 mt-0.5">
-                {receipt.currency}
-              </p>
-            </div>
+            {(receipt as Record<string,unknown>).storePhone && (
+              <div className="col-span-2">
+                <p className="text-xs text-gray-400 uppercase tracking-wide">Store Phone</p>
+                <p className="font-semibold text-gray-900 mt-0.5">
+                  📞 {(receipt as Record<string,unknown>).storePhone as string}
+                </p>
+              </div>
+            )}
           </div>
 
           {/* Line items */}

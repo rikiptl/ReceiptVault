@@ -118,7 +118,12 @@ jobs:
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"returnDeadline\" TIMESTAMP(3);" \
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"returnStatus\" TEXT;" \
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"returnNotes\" TEXT;" \
-              -c "CREATE INDEX IF NOT EXISTS \"receipts_returnStatus_idx\" ON \"receipts\" (\"returnStatus\");"
+              -c "CREATE INDEX IF NOT EXISTS \"receipts_returnStatus_idx\" ON \"receipts\" (\"returnStatus\");" \
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"subtotal\" TEXT;" \
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"tip\" TEXT;" \
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"confidence\" INTEGER;" \
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"paymentMethod\" TEXT;" \
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"storePhone\" TEXT;"
             echo "Migrations applied."
 
             # ── Firewall ─────────────────────────────────────────────────────

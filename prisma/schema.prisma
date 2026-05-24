@@ -16,15 +16,20 @@ model Receipt {
   fileSize     Int      @default(0)
 
   // Extracted data
-  merchant     String?
-  date         String?
-  total        String?
-  tax          String?
-  currency     String   @default("USD")
-  category     String?
-  ocrText      String?  @db.Text
-  items        Json?    @default("[]")
-  notes        String?  @db.Text
+  merchant       String?
+  date           String?
+  total          String?
+  subtotal       String?
+  tax            String?
+  tip            String?
+  currency       String   @default("USD")
+  category       String?
+  ocrText        String?  @db.Text
+  items          Json?    @default("[]")
+  notes          String?  @db.Text
+  confidence     Int?
+  paymentMethod  String?
+  storePhone     String?
 
   // Organization
   tags              String[]

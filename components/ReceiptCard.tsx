@@ -32,6 +32,9 @@ interface Receipt {
   isRecurring: boolean;
   warrantyExpiry: Date | null;
   reimbursable: boolean;
+  confidence: number | null;
+  paymentMethod: string | null;
+  returnStatus: string | null;
 }
 
 interface Props {
@@ -134,7 +137,13 @@ export default function ReceiptCard({ receipt: r, query = "", selectable = false
           {r.isRecurring && (
             <span className="badge bg-indigo-50 text-indigo-700" title="Recurring">🔁</span>
           )}
+          {r.returnStatus === "pending" && (
+            <span className="badge bg-orange-50 text-orange-700" title="Pending return">↩️</span>
+          )}
           {warrantyBadge(r.warrantyExpiry)}
+          {r.confidence != null && r.confidence < 50 && r.ocrDone && (
+            <span className="badge bg-red-50 text-red-600" title={`OCR confidence ${r.confidence}%`}>❗</span>
+          )}
           {!r.ocrDone && (
             <span className="badge bg-yellow-50 text-yellow-700">⏳</span>
           )}

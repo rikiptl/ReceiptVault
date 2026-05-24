@@ -14,6 +14,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libxext6 \
     libxrender-dev \
     libgomp1 \
+    libgl1 \
     && apt-get clean && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
