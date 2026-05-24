@@ -4,13 +4,15 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
 
+// tab: true → shown in the mobile bottom tab bar (max 5 for space)
 const NAV_LINKS = [
-  { href: "/",           label: "Dashboard",  icon: "🏠" },
-  { href: "/receipts",   label: "Receipts",   icon: "🧾" },
-  { href: "/upload",     label: "Upload",     icon: "📸" },
-  { href: "/analytics",  label: "Analytics",  icon: "📊" },
-  { href: "/warranties", label: "Warranties", icon: "🛡️" },
-  { href: "/export",     label: "Export",     icon: "📤" },
+  { href: "/",           label: "Dashboard",  icon: "🏠", tab: true  },
+  { href: "/receipts",   label: "Receipts",   icon: "🧾", tab: true  },
+  { href: "/upload",     label: "Upload",     icon: "📸", tab: true  },
+  { href: "/analytics",  label: "Analytics",  icon: "📊", tab: true  },
+  { href: "/budgets",    label: "Budgets",    icon: "💰", tab: false },
+  { href: "/warranties", label: "Warranties", icon: "🛡️", tab: false },
+  { href: "/export",     label: "Export",     icon: "📤", tab: true  },
 ];
 
 export default function Navbar() {
@@ -43,12 +45,6 @@ export default function Navbar() {
                 {l.label}
               </Link>
             ))}
-            <a
-              href="/api/export?format=csv"
-              className="px-3 py-1.5 rounded-lg text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 transition-colors"
-            >
-              Export
-            </a>
             <Link href="/upload" className="ml-2 btn-primary text-sm">
               + Upload
             </Link>
@@ -86,21 +82,13 @@ export default function Navbar() {
                 {l.label}
               </Link>
             ))}
-            <a
-              href="/api/export?format=csv"
-              onClick={() => setOpen(false)}
-              className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-gray-700 hover:bg-gray-50"
-            >
-              <span className="text-lg">📥</span>
-              Export CSV
-            </a>
           </div>
         )}
       </nav>
 
-      {/* ── Mobile bottom tab bar ────────────────────────────────────────── */}
+      {/* ── Mobile bottom tab bar (tab:true links only) ─────────────────── */}
       <div className="sm:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-gray-200 flex">
-        {NAV_LINKS.map((l) => (
+        {NAV_LINKS.filter((l) => l.tab).map((l) => (
           <Link
             key={l.href}
             href={l.href}

@@ -42,3 +42,13 @@ model Receipt {
 
   @@map("receipts")
 }
+
+model Budget {
+  id           String   @id @default(uuid())
+  category     String   @unique
+  monthlyLimit Float
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("budgets")
+}

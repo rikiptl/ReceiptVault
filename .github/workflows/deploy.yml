@@ -107,7 +107,8 @@ jobs:
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"isRecurring\" BOOLEAN NOT NULL DEFAULT false;" \
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"recurringInterval\" TEXT;" \
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"warrantyExpiry\" TIMESTAMP(3);" \
-              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"reimbursable\" BOOLEAN NOT NULL DEFAULT false;"
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"reimbursable\" BOOLEAN NOT NULL DEFAULT false;" \
+              -c "CREATE TABLE IF NOT EXISTS \"budgets\" (\"id\" TEXT NOT NULL, \"category\" TEXT NOT NULL, \"monthlyLimit\" DOUBLE PRECISION NOT NULL, \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, \"updatedAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT \"budgets_pkey\" PRIMARY KEY (\"id\"), CONSTRAINT \"budgets_category_key\" UNIQUE (\"category\"));"
             echo "Migrations applied."
 
             # ── Firewall ─────────────────────────────────────────────────────
