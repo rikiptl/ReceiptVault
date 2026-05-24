@@ -33,6 +33,11 @@ model Receipt {
   warrantyExpiry    DateTime?
   reimbursable      Boolean   @default(false)
 
+  // Return tracking
+  returnDeadline    DateTime?
+  returnStatus      String?   // "pending" | "completed" | "waived"
+  returnNotes       String?   @db.Text
+
   // Status
   verified     Boolean  @default(false)
   ocrDone      Boolean  @default(false)
@@ -45,6 +50,7 @@ model Receipt {
   @@index([createdAt])
   @@index([isRecurring])
   @@index([reimbursable])
+  @@index([returnStatus])
   @@map("receipts")
 }
 

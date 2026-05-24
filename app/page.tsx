@@ -255,6 +255,86 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── Real-world scenarios ────────────────────────────────────────────── */}
+      <section className="py-24 bg-gray-50">
+        <div className="max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <p className="text-green-600 font-semibold text-sm uppercase tracking-widest mb-3">
+              Real-life use cases
+            </p>
+            <h2 className="text-4xl sm:text-5xl font-black text-gray-900 tracking-tight">
+              Never miss a return window
+            </h2>
+            <p className="text-gray-500 mt-4 text-lg max-w-xl mx-auto">
+              Returns are stressful when you can&apos;t find the receipt. ReceiptVault makes it instant.
+            </p>
+          </div>
+
+          <div className="grid md:grid-cols-3 gap-6">
+            {/* Scenario 1 */}
+            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group">
+              <div className="w-12 h-12 rounded-2xl bg-orange-50 flex items-center justify-center text-2xl mb-5">👗</div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-bold text-orange-600 bg-orange-50 px-2.5 py-1 rounded-full">8 days left to return</span>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Wrong size from online order</h3>
+              <p className="text-gray-500 text-sm leading-relaxed mb-4">
+                Ordered a jacket online — wrong size. Search &ldquo;jacket&rdquo; or &ldquo;H&M&rdquo; and find the receipt instantly. Set a return deadline so you never miss the window.
+              </p>
+              <div className="bg-gray-50 rounded-xl p-3 text-xs font-mono text-gray-600 space-y-1">
+                <p>🔍 Search: <span className="text-green-700 font-bold">&ldquo;jacket&rdquo;</span></p>
+                <p>📅 Return deadline: <span className="text-orange-600 font-bold">Dec 15 (8 days)</span></p>
+                <p>📦 Status: <span className="text-orange-600 font-bold">Pending return</span></p>
+              </div>
+            </div>
+
+            {/* Scenario 2 */}
+            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group">
+              <div className="w-12 h-12 rounded-2xl bg-red-50 flex items-center justify-center text-2xl mb-5">📡</div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-bold text-red-600 bg-red-50 px-2.5 py-1 rounded-full">⚠️ 2 days left!</span>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Incompatible electronics</h3>
+              <p className="text-gray-500 text-sm leading-relaxed mb-4">
+                Bought a router that doesn&apos;t work with your setup. Best Buy has a 15-day return policy. ReceiptVault alerts you before it expires — no scrambling.
+              </p>
+              <div className="bg-gray-50 rounded-xl p-3 text-xs font-mono text-gray-600 space-y-1">
+                <p>🔍 Search: <span className="text-green-700 font-bold">&ldquo;router&rdquo;</span></p>
+                <p>📅 Return deadline: <span className="text-red-600 font-bold">Tomorrow (urgent!)</span></p>
+                <p>🚨 Alert: <span className="text-red-600 font-bold">2 days left — act now</span></p>
+              </div>
+            </div>
+
+            {/* Scenario 3 */}
+            <div className="bg-white rounded-3xl p-6 border border-gray-100 shadow-sm hover:shadow-lg transition-all duration-300 group">
+              <div className="w-12 h-12 rounded-2xl bg-green-50 flex items-center justify-center text-2xl mb-5">☕</div>
+              <div className="flex items-center gap-2 mb-3">
+                <span className="text-xs font-bold text-green-600 bg-green-50 px-2.5 py-1 rounded-full">✅ Return completed</span>
+              </div>
+              <h3 className="text-lg font-bold text-gray-900 mb-2">Defective appliance claim</h3>
+              <p className="text-gray-500 text-sm leading-relaxed mb-4">
+                Coffee maker stopped working after 3 months. Manufacturer 1-year warranty applies. Search &ldquo;coffee maker&rdquo;, find the receipt, and submit the claim — done.
+              </p>
+              <div className="bg-gray-50 rounded-xl p-3 text-xs font-mono text-gray-600 space-y-1">
+                <p>🔍 Search: <span className="text-green-700 font-bold">&ldquo;coffee maker&rdquo;</span></p>
+                <p>🛡️ Warranty: <span className="text-green-700 font-bold">Valid (9 months left)</span></p>
+                <p>✅ Status: <span className="text-green-600 font-bold">Claim submitted</span></p>
+              </div>
+            </div>
+          </div>
+
+          {/* Bottom CTA within section */}
+          <div className="text-center mt-12">
+            <Link
+              href="/dashboard"
+              className="inline-flex items-center gap-2 text-green-700 font-semibold hover:text-green-600 transition-colors"
+            >
+              Start tracking your returns →
+            </Link>
+          </div>
+        </div>
+      </section>
+
       {/* ── How it works ────────────────────────────────────────────────────── */}
       <section className="py-24 bg-gray-950 text-white relative overflow-hidden">
         <div className="absolute inset-0 pointer-events-none">

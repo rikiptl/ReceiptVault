@@ -33,6 +33,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     "recurringInterval",
     "warrantyExpiry",
     "reimbursable",
+    "returnDeadline",
+    "returnStatus",
+    "returnNotes",
   ];
   const data: Record<string, unknown> = {};
   for (const key of allowed) {

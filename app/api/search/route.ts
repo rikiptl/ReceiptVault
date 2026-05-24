@@ -12,11 +12,13 @@ export async function GET(req: NextRequest) {
   const receipts = await db.receipt.findMany({
     where: {
       OR: [
-        { merchant: { contains: q, mode: "insensitive" } },
-        { ocrText: { contains: q, mode: "insensitive" } },
-        { notes: { contains: q, mode: "insensitive" } },
-        { category: { contains: q, mode: "insensitive" } },
-        { date: { contains: q, mode: "insensitive" } },
+        { merchant:     { contains: q, mode: "insensitive" } },
+        { ocrText:      { contains: q, mode: "insensitive" } }, // includes all item names
+        { notes:        { contains: q, mode: "insensitive" } },
+        { category:     { contains: q, mode: "insensitive" } },
+        { date:         { contains: q, mode: "insensitive" } },
+        { returnNotes:  { contains: q, mode: "insensitive" } },
+        { originalName: { contains: q, mode: "insensitive" } },
       ],
     },
     orderBy: { createdAt: "desc" },

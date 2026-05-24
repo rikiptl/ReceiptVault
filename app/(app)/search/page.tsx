@@ -98,7 +98,7 @@ export default function SearchPage() {
       <div>
         <h1 className="text-2xl sm:text-3xl font-bold text-gray-900">⚡ Search</h1>
         <p className="text-gray-500 mt-1 text-sm">
-          Real-time search across merchant, category, notes and OCR text
+          Search by merchant, item name, category, notes or any text on the receipt
         </p>
       </div>
 
@@ -181,7 +181,7 @@ export default function SearchPage() {
         <div className="text-center py-14">
           <p className="text-5xl mb-3">🔍</p>
           <p className="text-gray-400 text-sm">Start typing to search all your receipts</p>
-          <p className="text-gray-300 text-xs mt-2">merchant · category · notes · receipt text</p>
+          <p className="text-gray-300 text-xs mt-2">item name · merchant · category · notes · full receipt text</p>
         </div>
       )}
 

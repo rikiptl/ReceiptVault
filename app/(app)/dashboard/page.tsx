@@ -30,6 +30,7 @@ async function getStats() {
     lastMonthReceipts,
     warrantyAlerts,
     budgets,
+    pendingReturns,
   ] = await Promise.all([
     db.receipt.count(),
     db.receipt.count({ where: { createdAt: { gte: thisMonthStart } } }),
@@ -51,6 +52,13 @@ async function getStats() {
       orderBy: { warrantyExpiry: "asc" },
     }),
     db.budget.findMany({ orderBy: { category: "asc" } }),
+    // Pending returns
+    db.receipt.findMany({
+      where: { returnStatus: "pending" },
+      select: { id: true, merchant: true, originalName: true, returnDeadline: true, total: true, currency: true },
+      orderBy: { returnDeadline: "asc" },
+      take: 5,
+    }),
   ]);
 
   // Spend calculations
@@ -120,6 +128,7 @@ async function getStats() {
     budgets,
     thisMonthSpendByCat,
     trendData,
+    pendingReturns,
   };
 }
 
@@ -132,6 +141,7 @@ export default async function DashboardPage() {
     budgets,
     thisMonthSpendByCat,
     trendData,
+    pendingReturns,
   } = await getStats();
 
   const stats = [
@@ -201,6 +211,55 @@ export default async function DashboardPage() {
           </Link>
         </div>
       )}
+
+      {/* ── Pending Returns alert ────────────────────────────────────── */}
+      {pendingReturns.length > 0 && (() => {
+        const urgentReturns = pendingReturns.filter((r) => {
+          if (!r.returnDeadline) return false;
+          const days = Math.ceil((new Date(r.returnDeadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24));
+          return days <= 3;
+        });
+        return (
+          <div className={`flex items-start gap-3 p-4 rounded-xl border ${
+            urgentReturns.length > 0
+              ? "bg-red-50 border-red-200"
+              : "bg-blue-50 border-blue-200"
+          }`}>
+            <span className="text-2xl shrink-0">{urgentReturns.length > 0 ? "🚨" : "↩️"}</span>
+            <div className="flex-1 min-w-0">
+              <p className={`font-semibold text-sm ${urgentReturns.length > 0 ? "text-red-800" : "text-blue-800"}`}>
+                {pendingReturns.length} pending return{pendingReturns.length !== 1 ? "s" : ""}
+                {urgentReturns.length > 0 && ` · ${urgentReturns.length} due within 3 days!`}
+              </p>
+              <ul className="mt-1 space-y-0.5">
+                {pendingReturns.slice(0, 3).map((r) => {
+                  const dl = r.returnDeadline
+                    ? Math.ceil((new Date(r.returnDeadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                    : null;
+                  return (
+                    <li key={r.id} className={`text-xs ${urgentReturns.length > 0 ? "text-red-700" : "text-blue-700"}`}>
+                      <Link href={`/receipts/${r.id}`} className="hover:underline font-medium">
+                        {r.merchant ?? r.originalName}
+                      </Link>
+                      {dl !== null && (
+                        <span className={dl <= 0 ? "font-bold" : ""}>
+                          {" "}— {dl <= 0 ? "overdue!" : dl === 0 ? "due today!" : `${dl} day${dl !== 1 ? "s" : ""} left`}
+                        </span>
+                      )}
+                    </li>
+                  );
+                })}
+              </ul>
+            </div>
+            <Link
+              href="/returns"
+              className={`shrink-0 text-xs font-medium hover:underline ${urgentReturns.length > 0 ? "text-red-700" : "text-blue-700"}`}
+            >
+              View all →
+            </Link>
+          </div>
+        );
+      })()}
 
       {/* ── Hero ─────────────────────────────────────────────────────── */}
       <div className="flex items-center justify-between">
@@ -340,11 +399,18 @@ export default async function DashboardPage() {
 
       {/* ── Quick actions ─────────────────────────────────────────────── */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Link href="/receipts" className="card hover:shadow-md transition-shadow flex items-center gap-4 cursor-pointer">
+        <Link href="/search" className="card hover:shadow-md transition-shadow flex items-center gap-4 cursor-pointer">
           <span className="text-3xl">🔍</span>
           <div>
             <p className="font-semibold text-gray-900">Search</p>
             <p className="text-sm text-gray-500">Find any receipt</p>
+          </div>
+        </Link>
+        <Link href="/returns" className="card hover:shadow-md transition-shadow flex items-center gap-4 cursor-pointer">
+          <span className="text-3xl">↩️</span>
+          <div>
+            <p className="font-semibold text-gray-900">Returns</p>
+            <p className="text-sm text-gray-500">Track return windows</p>
           </div>
         </Link>
         <Link href="/analytics" className="card hover:shadow-md transition-shadow flex items-center gap-4 cursor-pointer">
@@ -352,13 +418,6 @@ export default async function DashboardPage() {
           <div>
             <p className="font-semibold text-gray-900">Analytics</p>
             <p className="text-sm text-gray-500">Charts & insights</p>
-          </div>
-        </Link>
-        <Link href="/budgets" className="card hover:shadow-md transition-shadow flex items-center gap-4 cursor-pointer">
-          <span className="text-3xl">💰</span>
-          <div>
-            <p className="font-semibold text-gray-900">Budgets</p>
-            <p className="text-sm text-gray-500">Track category limits</p>
           </div>
         </Link>
         <Link href="/export" className="card hover:shadow-md transition-shadow flex items-center gap-4 cursor-pointer">

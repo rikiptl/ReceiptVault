@@ -41,6 +41,9 @@ interface Receipt {
   recurringInterval: string | null;
   warrantyExpiry: Date | null;
   reimbursable: boolean;
+  returnDeadline: Date | null;
+  returnStatus: string | null;
+  returnNotes: string | null;
 }
 
 export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
@@ -68,6 +71,12 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
       ? new Date(receipt.warrantyExpiry).toISOString().split("T")[0]
       : "",
     reimbursable:      receipt.reimbursable ?? false,
+    hasReturn:         !!receipt.returnStatus,
+    returnDeadline:    receipt.returnDeadline
+      ? new Date(receipt.returnDeadline).toISOString().split("T")[0]
+      : "",
+    returnStatus:      receipt.returnStatus ?? "pending",
+    returnNotes:       receipt.returnNotes ?? "",
   });
 
   const set = (field: string, value: unknown) =>
@@ -88,7 +97,12 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
     try {
       const payload = {
         ...form,
-        warrantyExpiry: form.warrantyExpiry ? new Date(form.warrantyExpiry).toISOString() : null,
+        warrantyExpiry:  form.warrantyExpiry  ? new Date(form.warrantyExpiry).toISOString()  : null,
+        returnStatus:    form.hasReturn ? form.returnStatus  : null,
+        returnDeadline:  form.hasReturn && form.returnDeadline
+          ? new Date(form.returnDeadline).toISOString()
+          : null,
+        returnNotes:     form.hasReturn ? form.returnNotes : null,
       };
       const res = await fetch(`/api/receipts/${receipt.id}`, {
         method: "PATCH",
@@ -289,6 +303,101 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
             </button>
           )}
         </div>
+      </div>
+
+      {/* ── Return Tracking ─────────────────────────────────────────── */}
+      <div className="rounded-xl border border-gray-200 p-3 space-y-3">
+        <label className="flex items-center gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            className="w-4 h-4 accent-brand-600"
+            checked={form.hasReturn}
+            onChange={(e) => set("hasReturn", e.target.checked)}
+          />
+          <div>
+            <p className="text-sm font-medium text-gray-700">↩️ Track as return</p>
+            <p className="text-xs text-gray-400 mt-0.5">Monitor return window and status</p>
+          </div>
+        </label>
+
+        {form.hasReturn && (
+          <div className="space-y-3 pt-1 border-t border-gray-100">
+            {/* Status */}
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Return status</label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { value: "pending",   label: "🔄 Pending",   active: "bg-orange-500 text-white border-orange-500" },
+                  { value: "completed", label: "✅ Returned",   active: "bg-green-500 text-white border-green-500"  },
+                  { value: "waived",    label: "🚫 Waived",     active: "bg-gray-500 text-white border-gray-500"   },
+                ].map((s) => (
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => set("returnStatus", s.value)}
+                    className={`text-xs py-1.5 px-2 rounded-lg border font-medium transition-all ${
+                      form.returnStatus === s.value
+                        ? s.active
+                        : "bg-white text-gray-600 border-gray-200 hover:border-gray-300"
+                    }`}
+                  >
+                    {s.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Deadline */}
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Return deadline</label>
+              <input
+                type="date"
+                className="input text-sm"
+                value={form.returnDeadline}
+                onChange={(e) => set("returnDeadline", e.target.value)}
+              />
+              {form.returnDeadline && (() => {
+                const days = Math.ceil(
+                  (new Date(form.returnDeadline).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
+                );
+                return (
+                  <p className={`text-xs mt-1 font-medium ${
+                    days < 0 ? "text-red-600" : days <= 3 ? "text-orange-600" : "text-gray-400"
+                  }`}>
+                    {days < 0
+                      ? `⛔ Overdue by ${Math.abs(days)} day${Math.abs(days) !== 1 ? "s" : ""}`
+                      : days === 0
+                      ? "⏰ Due today!"
+                      : days <= 3
+                      ? `⏰ ${days} day${days !== 1 ? "s" : ""} left — act fast`
+                      : `📅 ${days} days remaining`}
+                  </p>
+                );
+              })()}
+              {form.returnDeadline && (
+                <button
+                  type="button"
+                  onClick={() => set("returnDeadline", "")}
+                  className="text-xs text-red-500 hover:underline mt-1"
+                >
+                  Remove deadline
+                </button>
+              )}
+            </div>
+
+            {/* Return notes */}
+            <div>
+              <label className="text-xs text-gray-500 block mb-1">Return notes</label>
+              <textarea
+                className="input resize-none text-sm"
+                rows={2}
+                value={form.returnNotes}
+                onChange={(e) => set("returnNotes", e.target.value)}
+                placeholder="e.g. Wrong size, bring receipt to store, use online portal…"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       {/* ── Verified ────────────────────────────────────────────────── */}

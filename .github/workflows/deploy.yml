@@ -114,7 +114,11 @@ jobs:
               -c "CREATE INDEX IF NOT EXISTS \"receipts_createdAt_idx\" ON \"receipts\" (\"createdAt\");" \
               -c "CREATE INDEX IF NOT EXISTS \"receipts_isRecurring_idx\" ON \"receipts\" (\"isRecurring\");" \
               -c "CREATE INDEX IF NOT EXISTS \"receipts_reimbursable_idx\" ON \"receipts\" (\"reimbursable\");" \
-              -c "CREATE INDEX IF NOT EXISTS \"receipts_tags_gin_idx\" ON \"receipts\" USING GIN (\"tags\");"
+              -c "CREATE INDEX IF NOT EXISTS \"receipts_tags_gin_idx\" ON \"receipts\" USING GIN (\"tags\");" \
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"returnDeadline\" TIMESTAMP(3);" \
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"returnStatus\" TEXT;" \
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"returnNotes\" TEXT;" \
+              -c "CREATE INDEX IF NOT EXISTS \"receipts_returnStatus_idx\" ON \"receipts\" (\"returnStatus\");"
             echo "Migrations applied."
 
             # ── Firewall ─────────────────────────────────────────────────────
