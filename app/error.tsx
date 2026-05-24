@@ -23,7 +23,7 @@ export default function Error({
       </p>
       <div className="flex gap-3">
         <button onClick={reset} className="btn-primary">Try again</button>
-        <Link href="/" className="btn-secondary">Go home</Link>
+        <Link href="/dashboard" className="btn-secondary">Go home</Link>
       </div>
       {error.digest && (
         <p className="text-xs text-gray-300 mt-6 font-mono">ref: {error.digest}</p>

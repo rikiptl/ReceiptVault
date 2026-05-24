@@ -1,374 +1,348 @@
 import Link from "next/link";
-import { db } from "@/lib/db";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import MonthlyTrend from "@/components/charts/MonthlyTrend";
 
-export const dynamic = "force-dynamic";
+export const metadata = {
+  title: "ReceiptVault — Never Lose a Receipt Again",
+  description:
+    "Snap a photo, let AI extract the data. Search, budget, export for taxes — receipt management made effortless.",
+};
 
-// ── Colour helpers ────────────────────────────────────────────────────────────
-function budgetBarColor(pct: number) {
-  if (pct >= 100) return "bg-red-500";
-  if (pct >= 80)  return "bg-yellow-400";
-  return "bg-green-500";
-}
-function budgetTextColor(pct: number) {
-  if (pct >= 100) return "text-red-600";
-  if (pct >= 80)  return "text-yellow-600";
-  return "text-green-600";
-}
+// ── Fake receipt cards for hero mockup ────────────────────────────────────────
+const MOCK_RECEIPTS = [
+  { emoji: "🛒", merchant: "Whole Foods Market", cat: "Groceries",      amount: "$47.32", date: "May 23",  tag: "business",  color: "bg-green-500" },
+  { emoji: "⚡", merchant: "AWS",                cat: "Software/SaaS",  amount: "$124.00", date: "May 22", tag: "recurring", color: "bg-purple-500" },
+  { emoji: "🍔", merchant: "Shake Shack",        cat: "Food & Dining",  amount: "$18.50", date: "May 21",  tag: "personal",  color: "bg-orange-500" },
+];
 
-async function getStats() {
-  const now            = new Date();
-  const thisMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-  const lastMonthStart = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+const FEATURES = [
+  {
+    icon: "📸",
+    title: "Smart OCR Scanning",
+    desc: "Snap any receipt — our AI reads merchant, date, total, line items and category instantly. No manual entry.",
+    color: "bg-blue-50 text-blue-600",
+  },
+  {
+    icon: "🔍",
+    title: "Instant Search",
+    desc: "Type anything and find receipts in milliseconds. Searches across merchant, notes, categories and receipt text.",
+    color: "bg-purple-50 text-purple-600",
+  },
+  {
+    icon: "📊",
+    title: "Spending Analytics",
+    desc: "Beautiful charts showing spend by category, monthly trends, year-over-year comparison and top merchants.",
+    color: "bg-green-50 text-green-600",
+  },
+  {
+    icon: "🛡️",
+    title: "Warranty Tracker",
+    desc: "Set warranty expiry dates and get alerts before they run out. Never miss a warranty claim again.",
+    color: "bg-yellow-50 text-yellow-600",
+  },
+  {
+    icon: "📤",
+    title: "Tax-Ready Export",
+    desc: "Generate a formatted PDF tax report grouped by category, or download CSV for your accountant.",
+    color: "bg-red-50 text-red-600",
+  },
+  {
+    icon: "💰",
+    title: "Budget Tracking",
+    desc: "Set monthly spend limits per category. Dashboard shows progress bars so you always know where you stand.",
+    color: "bg-indigo-50 text-indigo-600",
+  },
+];
 
-  const [
-    total,
-    thisMonthCount,
-    recentReceipts,
-    allReceipts,
-    lastMonthReceipts,
-    warrantyAlerts,
-    budgets,
-  ] = await Promise.all([
-    db.receipt.count(),
-    db.receipt.count({ where: { createdAt: { gte: thisMonthStart } } }),
-    db.receipt.findMany({ orderBy: { createdAt: "desc" }, take: 5 }),
-    db.receipt.findMany({ select: { total: true, currency: true, category: true, createdAt: true } }),
-    db.receipt.findMany({
-      where: { createdAt: { gte: lastMonthStart, lt: thisMonthStart } },
-      select: { total: true },
-    }),
-    // Warranties expiring in ≤7 days
-    db.receipt.findMany({
-      where: {
-        warrantyExpiry: {
-          gte: now,
-          lte: new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
-        },
-      },
-      select: { id: true, merchant: true, originalName: true, warrantyExpiry: true },
-      orderBy: { warrantyExpiry: "asc" },
-    }),
-    db.budget.findMany({ orderBy: { category: "asc" } }),
-  ]);
+const STEPS = [
+  {
+    n: "01",
+    title: "Snap or upload",
+    desc: "Take a photo with your phone camera or drag-and-drop a PDF. We accept JPG, PNG, WebP and PDF.",
+    icon: "📸",
+  },
+  {
+    n: "02",
+    title: "AI extracts everything",
+    desc: "OCR automatically reads merchant name, date, total, tax, currency and line items — no typing needed.",
+    icon: "⚡",
+  },
+  {
+    n: "03",
+    title: "Organized forever",
+    desc: "Tag, categorize and search. Export for tax season or check your spending trends in one tap.",
+    icon: "🗂️",
+  },
+];
 
-  // Spend calculations
-  let totalSpend     = 0;
-  let thisMonthSpend = 0;
-  let lastMonthSpend = 0;
-  const categoryMap: Record<string, number> = {};
-  const thisMonthSpendByCat: Record<string, number> = {};
-
-  const byMonthKey: Record<string, number> = {};
-
-  for (const r of allReceipts) {
-    const v = parseFloat(r.total ?? "");
-    if (isNaN(v) || v <= 0) continue;
-    totalSpend += v;
-
-    if (r.createdAt >= thisMonthStart) {
-      thisMonthSpend += v;
-      const cat = r.category ?? "Other";
-      thisMonthSpendByCat[cat] = (thisMonthSpendByCat[cat] ?? 0) + v;
-    }
-
-    const cat = r.category ?? "Other";
-    categoryMap[cat] = (categoryMap[cat] ?? 0) + 1;
-
-    // 6-month rolling trend
-    const d   = r.createdAt;
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    byMonthKey[key] = (byMonthKey[key] ?? 0) + v;
-  }
-
-  // Build last 6 months trend array
-  const trendData = Array.from({ length: 6 }, (_, i) => {
-    const d   = new Date(now.getFullYear(), now.getMonth() - (5 - i), 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    return {
-      month: d.toLocaleString("en-US", { month: "short", year: "2-digit" }),
-      total: Math.round((byMonthKey[key] ?? 0) * 100) / 100,
-    };
-  });
-
-  for (const r of lastMonthReceipts) {
-    const v = parseFloat(r.total ?? "");
-    if (!isNaN(v) && v > 0) lastMonthSpend += v;
-  }
-
-  const topCategory = Object.entries(categoryMap).sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
-
-  // Delta vs last month
-  let deltaLabel = "";
-  let deltaPositive = true;
-  if (lastMonthSpend > 0) {
-    const delta    = thisMonthSpend - lastMonthSpend;
-    const deltaPct = Math.round(Math.abs(delta / lastMonthSpend) * 100);
-    deltaPositive  = delta >= 0;
-    deltaLabel     = `${delta >= 0 ? "↑" : "↓"} ${deltaPct}% vs last month`;
-  } else if (thisMonthSpend > 0) {
-    deltaLabel    = "First receipts this month";
-    deltaPositive = true;
-  }
-
-  return {
-    total, thisMonthCount, totalSpend, thisMonthSpend,
-    deltaLabel, deltaPositive,
-    topCategory, recentReceipts,
-    warrantyAlerts,
-    budgets,
-    thisMonthSpendByCat,
-    trendData,
-  };
-}
-
-export default async function DashboardPage() {
-  const {
-    total, thisMonthCount, totalSpend, thisMonthSpend,
-    deltaLabel, deltaPositive,
-    topCategory, recentReceipts,
-    warrantyAlerts,
-    budgets,
-    thisMonthSpendByCat,
-    trendData,
-  } = await getStats();
-
-  const stats = [
-    {
-      label: "Total Receipts",
-      value: total.toString(),
-      icon: "🧾",
-      color: "bg-blue-50 text-blue-700",
-      sub: null,
-    },
-    {
-      label: "This Month",
-      value: thisMonthCount.toString(),
-      icon: "📅",
-      color: "bg-purple-50 text-purple-700",
-      sub: null,
-    },
-    {
-      label: "Total Spend",
-      value: `$${totalSpend.toFixed(2)}`,
-      icon: "💰",
-      color: "bg-green-50 text-green-700",
-      sub: deltaLabel ? { text: deltaLabel, positive: deltaPositive } : null,
-    },
-    {
-      label: "Top Category",
-      value: topCategory,
-      icon: "📊",
-      color: "bg-orange-50 text-orange-700",
-      sub: null,
-    },
-  ];
-
+export default function LandingPage() {
   return (
-    <div className="space-y-8">
-      {/* ── Warranty alert banner ─────────────────────────────────────── */}
-      {warrantyAlerts.length > 0 && (
-        <div className="flex items-start gap-3 p-4 rounded-xl bg-yellow-50 border border-yellow-200">
-          <span className="text-2xl shrink-0">⚠️</span>
-          <div className="flex-1 min-w-0">
-            <p className="font-semibold text-yellow-800 text-sm">
-              {warrantyAlerts.length === 1
-                ? "1 warranty expires within 7 days"
-                : `${warrantyAlerts.length} warranties expire within 7 days`}
-            </p>
-            <ul className="mt-1 space-y-0.5">
-              {warrantyAlerts.slice(0, 3).map((r) => {
-                const days = Math.ceil(
-                  (new Date(r.warrantyExpiry!).getTime() - Date.now()) / (1000 * 60 * 60 * 24)
-                );
-                return (
-                  <li key={r.id} className="text-xs text-yellow-700">
-                    <Link href={`/receipts/${r.id}`} className="hover:underline font-medium">
-                      {r.merchant ?? r.originalName}
-                    </Link>
-                    {" "}— expires in {days} day{days !== 1 ? "s" : ""}
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-          <Link
-            href="/warranties"
-            className="shrink-0 text-xs text-yellow-700 font-medium hover:underline"
-          >
-            View all →
+    <div className="min-h-screen bg-white overflow-x-hidden">
+
+      {/* ── Landing Navbar ──────────────────────────────────────────────────── */}
+      <header className="sticky top-0 z-50 bg-gray-950/80 backdrop-blur-md border-b border-white/5">
+        <div className="max-w-7xl mx-auto px-6 h-16 flex items-center justify-between">
+          <Link href="/" className="flex items-center gap-2.5 font-bold text-white">
+            <span className="text-2xl">🧾</span>
+            <span className="text-lg tracking-tight">ReceiptVault</span>
           </Link>
-        </div>
-      )}
-
-      {/* ── Hero ─────────────────────────────────────────────────────── */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1">
-            Track receipts everywhere — OCR powered document management
-          </p>
-        </div>
-        <Link href="/upload" className="btn-primary flex items-center gap-2">
-          <span>+</span> Upload Receipt
-        </Link>
-      </div>
-
-      {/* ── Stats ────────────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        {stats.map((s) => (
-          <div key={s.label} className="card flex flex-col gap-2">
-            <span className={`text-2xl w-10 h-10 rounded-lg flex items-center justify-center ${s.color}`}>
-              {s.icon}
-            </span>
-            <p className="text-2xl font-bold text-gray-900">{s.value}</p>
-            <p className="text-sm text-gray-500">{s.label}</p>
-            {s.sub && (
-              <p className={`text-xs font-medium ${s.sub.positive ? "text-green-600" : "text-red-500"}`}>
-                {s.sub.text}
-              </p>
-            )}
+          <div className="flex items-center gap-3">
+            <Link
+              href="/dashboard"
+              className="hidden sm:block text-sm text-gray-400 hover:text-white transition-colors px-3 py-1.5"
+            >
+              Sign in
+            </Link>
+            <Link
+              href="/dashboard"
+              className="bg-green-500 hover:bg-green-400 text-white text-sm font-semibold px-4 py-2 rounded-xl transition-colors"
+            >
+              Get Started →
+            </Link>
           </div>
-        ))}
-      </div>
+        </div>
+      </header>
 
-      {/* ── Spending trend (6 months) ─────────────────────────────────── */}
-      {trendData.some((d) => d.total > 0) && (
-        <div className="card space-y-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-lg font-semibold text-gray-900">📈 Spending Trend</h2>
-              <p className="text-xs text-gray-400 mt-0.5">Last 6 months</p>
+      {/* ── Hero ────────────────────────────────────────────────────────────── */}
+      <section className="relative bg-gray-950 text-white overflow-hidden">
+        {/* Background glow */}
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[900px] h-[600px] bg-green-600/10 rounded-full blur-[120px]" />
+          <div className="absolute bottom-0 right-1/4 w-[400px] h-[400px] bg-indigo-600/8 rounded-full blur-[100px]" />
+        </div>
+
+        {/* Grid pattern overlay */}
+        <div
+          className="absolute inset-0 pointer-events-none opacity-[0.03]"
+          style={{
+            backgroundImage: `linear-gradient(rgba(255,255,255,0.5) 1px, transparent 1px), linear-gradient(90deg, rgba(255,255,255,0.5) 1px, transparent 1px)`,
+            backgroundSize: "48px 48px",
+          }}
+        />
+
+        <div className="relative max-w-7xl mx-auto px-6 pt-20 pb-16 lg:pt-28 lg:pb-20">
+          <div className="text-center max-w-4xl mx-auto">
+            {/* Badge */}
+            <div className="inline-flex items-center gap-2 bg-green-500/10 border border-green-500/20 text-green-400 px-4 py-1.5 rounded-full text-sm font-medium mb-8">
+              <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+              OCR-powered · Free to use
             </div>
-            <Link href="/analytics" className="text-sm text-brand-600 hover:text-brand-700 font-medium">
-              Full analytics →
-            </Link>
-          </div>
-          <MonthlyTrend data={trendData} />
-        </div>
-      )}
 
-      {/* ── Budget overview ───────────────────────────────────────────── */}
-      {budgets.length > 0 && (
-        <div className="card space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-lg font-semibold text-gray-900">💰 Monthly Budgets</h2>
-            <Link href="/budgets" className="text-sm text-brand-600 hover:text-brand-700 font-medium">
-              Manage →
-            </Link>
+            {/* Headline */}
+            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-[1.05] mb-6">
+              Every receipt.
+              <br />
+              <span className="text-transparent bg-clip-text bg-gradient-to-r from-green-400 to-emerald-300">
+                Organized. Effortless.
+              </span>
+            </h1>
+
+            {/* Subline */}
+            <p className="text-lg sm:text-xl text-gray-400 max-w-2xl mx-auto leading-relaxed mb-10">
+              Snap a photo, let AI extract the data automatically. Search instantly,
+              track warranties, export for taxes — all your receipts in one place.
+            </p>
+
+            {/* CTAs */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
+              <Link
+                href="/dashboard"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-green-500 hover:bg-green-400 text-white font-bold px-8 py-4 rounded-2xl text-base transition-all hover:scale-[1.03] hover:shadow-[0_0_32px_rgba(34,197,94,0.4)] active:scale-[0.98]"
+              >
+                Get Started Free
+                <span className="text-lg">→</span>
+              </Link>
+              <a
+                href="#features"
+                className="w-full sm:w-auto inline-flex items-center justify-center gap-2 text-gray-300 hover:text-white border border-white/10 hover:border-white/20 font-medium px-8 py-4 rounded-2xl text-base transition-all hover:bg-white/5"
+              >
+                See features ↓
+              </a>
+            </div>
           </div>
-          <div className="space-y-3">
-            {budgets.map((b) => {
-              const s   = thisMonthSpendByCat[b.category] ?? 0;
-              const pct = Math.min(Math.round((s / b.monthlyLimit) * 100), 999);
-              return (
-                <div key={b.category}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-sm text-gray-700 font-medium">{b.category}</span>
-                    <span className="text-xs text-gray-500">
-                      <span className={`font-semibold ${budgetTextColor(pct)}`}>
-                        ${s.toFixed(0)}
-                      </span>
-                      {" / "}${b.monthlyLimit.toFixed(0)}
-                      {" "}
-                      <span className={`font-medium ${budgetTextColor(pct)}`}>({pct}%)</span>
+
+          {/* ── Floating receipt card mockup ───────────────────────────────── */}
+          <div className="relative mt-20 max-w-md mx-auto h-64">
+            {MOCK_RECEIPTS.map((r, i) => (
+              <div
+                key={r.merchant}
+                className="absolute w-full bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-4"
+                style={{
+                  top:       `${i * 14}px`,
+                  left:      `${i * 6}px`,
+                  right:     `${i * 6}px`,
+                  transform: `rotate(${[-4, -1.5, 1][i]}deg)`,
+                  zIndex:    i + 1,
+                }}
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <span className="text-2xl">{r.emoji}</span>
+                    <div>
+                      <p className="text-white font-semibold text-sm">{r.merchant}</p>
+                      <p className="text-gray-500 text-xs">{r.cat} · {r.date}</p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-white font-bold">{r.amount}</p>
+                    <span className={`inline-block mt-0.5 text-[10px] font-medium text-white px-2 py-0.5 rounded-full ${r.color}`}>
+                      {r.tag}
                     </span>
                   </div>
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className={`h-full rounded-full transition-all ${budgetBarColor(pct)}`}
-                      style={{ width: `${Math.min(pct, 100)}%` }}
-                    />
-                  </div>
                 </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
-
-      {/* ── Recent Receipts ───────────────────────────────────────────── */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h2 className="text-lg font-semibold text-gray-900">Recent Receipts</h2>
-          <Link href="/receipts" className="text-sm text-brand-600 hover:text-brand-700 font-medium">
-            View all →
-          </Link>
-        </div>
-
-        {recentReceipts.length === 0 ? (
-          <div className="text-center py-12">
-            <p className="text-4xl mb-3">🧾</p>
-            <p className="text-gray-500 mb-4">No receipts yet</p>
-            <Link href="/upload" className="btn-primary">Upload your first receipt</Link>
-          </div>
-        ) : (
-          <div className="divide-y divide-gray-100">
-            {recentReceipts.map((r) => (
-              <Link
-                key={r.id}
-                href={`/receipts/${r.id}`}
-                className="flex items-center justify-between py-3 hover:bg-gray-50 -mx-2 px-2 rounded-lg transition-colors"
-              >
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center text-lg">
-                    🧾
-                  </div>
-                  <div>
-                    <p className="font-medium text-gray-900 text-sm">
-                      {r.merchant ?? r.originalName}
-                    </p>
-                    <p className="text-xs text-gray-400">
-                      {r.category ?? "Uncategorized"} · {formatDate(r.createdAt.toISOString())}
-                    </p>
-                  </div>
+                {/* Mini progress bar */}
+                <div className="mt-3 h-1 bg-white/10 rounded-full overflow-hidden">
+                  <div className={`h-full rounded-full ${r.color}`} style={{ width: `${[60, 85, 45][i]}%` }} />
                 </div>
-                <div className="text-right">
-                  <p className="font-semibold text-gray-900 text-sm">
-                    {r.total ? formatCurrency(r.total, r.currency) : "—"}
-                  </p>
-                  {r.verified && (
-                    <span className="badge bg-green-50 text-green-700">✓ verified</span>
-                  )}
-                </div>
-              </Link>
+              </div>
             ))}
           </div>
-        )}
-      </div>
+        </div>
 
-      {/* ── Quick actions ─────────────────────────────────────────────── */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Link href="/receipts" className="card hover:shadow-md transition-shadow flex items-center gap-4 cursor-pointer">
-          <span className="text-3xl">🔍</span>
-          <div>
-            <p className="font-semibold text-gray-900">Search</p>
-            <p className="text-sm text-gray-500">Find any receipt</p>
+        {/* Bottom fade */}
+        <div className="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-white/[0.02] to-transparent" />
+      </section>
+
+      {/* ── Stats strip ─────────────────────────────────────────────────────── */}
+      <section className="bg-green-600 text-white">
+        <div className="max-w-7xl mx-auto px-6 py-5">
+          <div className="grid grid-cols-3 divide-x divide-green-500">
+            {[
+              { icon: "⚡", stat: "< 10 sec",  label: "to scan a receipt"    },
+              { icon: "🔍", stat: "Full text",  label: "OCR search"           },
+              { icon: "📤", stat: "PDF + CSV",  label: "tax-ready exports"    },
+            ].map((s) => (
+              <div key={s.label} className="text-center px-4 py-2">
+                <p className="text-2xl mb-0.5">{s.icon}</p>
+                <p className="font-black text-lg leading-tight">{s.stat}</p>
+                <p className="text-green-200 text-xs">{s.label}</p>
+              </div>
+            ))}
           </div>
-        </Link>
-        <Link href="/analytics" className="card hover:shadow-md transition-shadow flex items-center gap-4 cursor-pointer">
-          <span className="text-3xl">📊</span>
-          <div>
-            <p className="font-semibold text-gray-900">Analytics</p>
-            <p className="text-sm text-gray-500">Charts & insights</p>
+        </div>
+      </section>
+
+      {/* ── Features grid ───────────────────────────────────────────────────── */}
+      <section id="features" className="py-24 bg-white">
+        <div className="max-w-7xl mx-auto px-6">
+          {/* Section header */}
+          <div className="text-center mb-16">
+            <p className="text-green-600 font-semibold text-sm uppercase tracking-widest mb-3">
+              Everything you need
+            </p>
+            <h2 className="text-4xl sm:text-5xl font-black text-gray-900 tracking-tight">
+              Built for real receipt management
+            </h2>
+            <p className="text-gray-500 mt-4 text-lg max-w-xl mx-auto">
+              Not just storage — a complete system for capturing, organizing and reporting on your spending.
+            </p>
           </div>
-        </Link>
-        <Link href="/budgets" className="card hover:shadow-md transition-shadow flex items-center gap-4 cursor-pointer">
-          <span className="text-3xl">💰</span>
-          <div>
-            <p className="font-semibold text-gray-900">Budgets</p>
-            <p className="text-sm text-gray-500">Track category limits</p>
+
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            {FEATURES.map((f) => (
+              <div
+                key={f.title}
+                className="group relative bg-white border border-gray-100 rounded-3xl p-6 hover:shadow-xl hover:-translate-y-1 transition-all duration-300"
+              >
+                <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-2xl mb-4 ${f.color}`}>
+                  {f.icon}
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">{f.title}</h3>
+                <p className="text-gray-500 text-sm leading-relaxed">{f.desc}</p>
+                {/* Hover accent */}
+                <div className="absolute inset-0 rounded-3xl ring-2 ring-green-500 ring-offset-2 opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none" />
+              </div>
+            ))}
           </div>
-        </Link>
-        <Link href="/export" className="card hover:shadow-md transition-shadow flex items-center gap-4 cursor-pointer">
-          <span className="text-3xl">📤</span>
-          <div>
-            <p className="font-semibold text-gray-900">Export</p>
-            <p className="text-sm text-gray-500">PDF & CSV reports</p>
+        </div>
+      </section>
+
+      {/* ── How it works ────────────────────────────────────────────────────── */}
+      <section className="py-24 bg-gray-950 text-white relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-green-600/8 rounded-full blur-[100px]" />
+        </div>
+
+        <div className="relative max-w-7xl mx-auto px-6">
+          <div className="text-center mb-16">
+            <p className="text-green-400 font-semibold text-sm uppercase tracking-widest mb-3">
+              Simple as 1 – 2 – 3
+            </p>
+            <h2 className="text-4xl sm:text-5xl font-black tracking-tight">
+              How it works
+            </h2>
           </div>
-        </Link>
-      </div>
+
+          <div className="grid md:grid-cols-3 gap-8 relative">
+            {/* Connecting line (desktop) */}
+            <div className="hidden md:block absolute top-10 left-[calc(16.66%+2rem)] right-[calc(16.66%+2rem)] h-px bg-gradient-to-r from-transparent via-green-500/40 to-transparent" />
+
+            {STEPS.map((s, i) => (
+              <div key={s.n} className="relative text-center">
+                {/* Step number ring */}
+                <div className="relative inline-flex mb-6">
+                  <div className="w-20 h-20 rounded-2xl bg-gray-900 border border-white/10 flex items-center justify-center text-4xl">
+                    {s.icon}
+                  </div>
+                  <span className="absolute -top-2 -right-2 w-7 h-7 rounded-full bg-green-500 text-white text-xs font-black flex items-center justify-center">
+                    {i + 1}
+                  </span>
+                </div>
+                <h3 className="text-xl font-bold mb-3">{s.title}</h3>
+                <p className="text-gray-400 text-sm leading-relaxed max-w-xs mx-auto">{s.desc}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── Final CTA ───────────────────────────────────────────────────────── */}
+      <section className="py-24 bg-white relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none">
+          <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-green-100 rounded-full blur-[100px] opacity-60" />
+        </div>
+
+        <div className="relative max-w-3xl mx-auto px-6 text-center">
+          <div className="inline-flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-4 py-1.5 rounded-full text-sm font-medium mb-8">
+            🎉 Free forever · No credit card needed
+          </div>
+          <h2 className="text-4xl sm:text-5xl font-black text-gray-900 tracking-tight mb-5">
+            Start organizing your
+            <br />
+            <span className="text-green-600">receipts today</span>
+          </h2>
+          <p className="text-gray-500 text-lg mb-10">
+            Join ReceiptVault and never scramble for a receipt again at tax time.
+          </p>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-3 bg-gray-950 hover:bg-gray-800 text-white font-bold px-10 py-5 rounded-2xl text-lg transition-all hover:scale-[1.03] hover:shadow-2xl active:scale-[0.98]"
+          >
+            <span>🧾</span>
+            Get Started — It&apos;s Free
+            <span>→</span>
+          </Link>
+          <p className="text-gray-400 text-sm mt-5">Takes less than 30 seconds to set up</p>
+        </div>
+      </section>
+
+      {/* ── Footer ──────────────────────────────────────────────────────────── */}
+      <footer className="bg-gray-950 text-gray-500 border-t border-white/5">
+        <div className="max-w-7xl mx-auto px-6 py-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <Link href="/" className="flex items-center gap-2 text-white font-bold">
+            <span className="text-xl">🧾</span>
+            ReceiptVault
+          </Link>
+          <p className="text-sm">
+            © {new Date().getFullYear()} ReceiptVault. Built for everyday people.
+          </p>
+          <Link
+            href="/dashboard"
+            className="text-sm text-green-400 hover:text-green-300 font-medium transition-colors"
+          >
+            Open App →
+          </Link>
+        </div>
+      </footer>
+
     </div>
   );
 }

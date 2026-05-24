@@ -24,7 +24,7 @@ export default async function ReceiptDetailPage({ params }: PageProps) {
     <div className="space-y-6">
       {/* Breadcrumb */}
       <div className="flex items-center gap-2 text-sm text-gray-500">
-        <Link href="/" className="hover:text-gray-700">
+        <Link href="/dashboard" className="hover:text-gray-700">
           Dashboard
         </Link>
         <span>›</span>

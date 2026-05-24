@@ -1,6 +1,5 @@
 import type { Metadata, Viewport } from "next";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
 
 export const metadata: Metadata = {
   title: "ReceiptVault — Track Receipts Everywhere",
@@ -21,19 +20,11 @@ export const viewport: Viewport = {
   themeColor: "#16a34a",
 };
 
-export default function RootLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="en">
-      <body className="min-h-screen bg-gray-50">
-        <Navbar />
-        {/* pb-16 = room for mobile bottom tab bar */}
-        <main className="max-w-6xl mx-auto px-4 py-6 pb-24 sm:pb-8">
-          {children}
-        </main>
+      <body className="min-h-screen bg-gray-50 antialiased">
+        {children}
       </body>
     </html>
   );

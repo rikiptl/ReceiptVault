@@ -137,7 +137,7 @@ export default function BudgetsPage() {
             Set monthly spend limits per category — {monthName}
           </p>
         </div>
-        <Link href="/" className="btn-secondary text-sm">← Dashboard</Link>
+        <Link href="/dashboard" className="btn-secondary text-sm">← Dashboard</Link>
       </div>
 
       {/* Summary cards */}

@@ -6,7 +6,7 @@ import { useState } from "react";
 
 // tab: true → shown in the mobile bottom tab bar (max 5 for space)
 const NAV_LINKS = [
-  { href: "/",           label: "Dashboard",  icon: "🏠", tab: true  },
+  { href: "/dashboard",  label: "Dashboard",  icon: "🏠", tab: true  },
   { href: "/receipts",   label: "Receipts",   icon: "🧾", tab: true  },
   { href: "/upload",     label: "Upload",     icon: "📸", tab: true  },
   { href: "/search",     label: "Search",     icon: "🔍", tab: true  },
