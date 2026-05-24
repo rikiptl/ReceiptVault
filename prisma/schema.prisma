@@ -40,6 +40,11 @@ model Receipt {
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  @@index([merchant])
+  @@index([category])
+  @@index([createdAt])
+  @@index([isRecurring])
+  @@index([reimbursable])
   @@map("receipts")
 }
 

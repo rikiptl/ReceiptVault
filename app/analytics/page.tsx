@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 // ── Data aggregation (server-side) ────────────────────────────────────────────
 async function getAnalyticsData() {
   const receipts = await db.receipt.findMany({
-    select: { total: true, category: true, merchant: true, createdAt: true },
+    select: { total: true, category: true, merchant: true, createdAt: true, currency: true },
   });
 
   const now           = new Date();
@@ -20,6 +20,7 @@ async function getAnalyticsData() {
   const byCategory: Record<string, { total: number; count: number }> = {};
   const byMonthKey:  Record<string, number>                          = {};
   const byMerchant:  Record<string, { total: number; count: number }> = {};
+  const byCurrency:  Record<string, { total: number; count: number }> = {};
 
   let totalSpend     = 0;
   let thisMonthSpend = 0;
@@ -32,6 +33,12 @@ async function getAnalyticsData() {
     totalSpend += amount;
     validCount++;
     if (r.createdAt >= thisMonthStart) thisMonthSpend += amount;
+
+    // Currency breakdown
+    const cur = r.currency || "USD";
+    byCurrency[cur] ??= { total: 0, count: 0 };
+    byCurrency[cur].total += amount;
+    byCurrency[cur].count++;
 
     // Category
     const cat = r.category ?? "Uncategorized";
@@ -85,6 +92,13 @@ async function getAnalyticsData() {
     .sort((a, b) => b.total - a.total)
     .slice(0, 10);
 
+  const currencies = Object.keys(byCurrency).sort();
+  const currencyData = currencies.map((cur) => ({
+    currency: cur,
+    total:    Math.round(byCurrency[cur].total * 100) / 100,
+    count:    byCurrency[cur].count,
+  }));
+
   return {
     totalSpend:      Math.round(totalSpend * 100) / 100,
     thisMonthSpend:  Math.round(thisMonthSpend * 100) / 100,
@@ -97,6 +111,8 @@ async function getAnalyticsData() {
     yoyData,
     categoryData,
     merchantData,
+    currencies,
+    currencyData,
   };
 }
 
@@ -134,7 +150,8 @@ export default async function AnalyticsPage() {
     { label: "Receipts Tracked",value: data.totalReceipts.toString(), icon: "🧾", color: "bg-orange-50 text-orange-700" },
   ];
 
-  const noData = data.validCount === 0;
+  const noData        = data.validCount === 0;
+  const multiCurrency = data.currencies.length > 1;
 
   return (
     <div className="space-y-6">
@@ -145,6 +162,21 @@ export default async function AnalyticsPage() {
           Spending insights across {data.totalReceipts} receipt{data.totalReceipts !== 1 ? "s" : ""}
         </p>
       </div>
+
+      {/* Multi-currency warning */}
+      {multiCurrency && (
+        <div className="flex items-start gap-3 p-4 rounded-xl bg-amber-50 border border-amber-200">
+          <span className="text-xl shrink-0">🌐</span>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold text-amber-800 text-sm">
+              Multiple currencies detected ({data.currencies.join(", ")})
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              Totals are summed without conversion and may not reflect true spend. Breakdown by currency below.
+            </p>
+          </div>
+        </div>
+      )}
 
       {noData ? (
         <div className="card text-center py-16">
@@ -203,6 +235,38 @@ export default async function AnalyticsPage() {
               subtitle={`Top ${data.merchantData.length} by spend`}
             >
               <TopMerchants data={data.merchantData} />
+            </ChartCard>
+          )}
+
+          {/* Row 4: Currency breakdown (only when multiple currencies) */}
+          {multiCurrency && (
+            <ChartCard
+              title="🌐 Spend by Currency"
+              subtitle="Receipts are not converted — original amounts shown"
+            >
+              <div className="space-y-3">
+                {data.currencyData.map((c) => {
+                  const pct = Math.round((c.total / data.totalSpend) * 100);
+                  return (
+                    <div key={c.currency}>
+                      <div className="flex items-center justify-between mb-1 text-sm">
+                        <span className="font-medium text-gray-800">{c.currency}</span>
+                        <span className="text-gray-500">
+                          <span className="font-semibold text-gray-900">${c.total.toFixed(2)}</span>
+                          {" "}· {c.count} receipt{c.count !== 1 ? "s" : ""}
+                          {" "}· {pct}%
+                        </span>
+                      </div>
+                      <div className="h-2 bg-gray-100 rounded-full overflow-hidden">
+                        <div
+                          className="h-full bg-brand-500 rounded-full"
+                          style={{ width: `${pct}%` }}
+                        />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </ChartCard>
           )}
         </>

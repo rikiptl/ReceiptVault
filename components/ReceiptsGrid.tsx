@@ -17,6 +17,7 @@ interface Receipt {
   total: string | null;
   currency: string;
   category: string | null;
+  notes: string | null;
   verified: boolean;
   ocrDone: boolean;
   createdAt: Date;

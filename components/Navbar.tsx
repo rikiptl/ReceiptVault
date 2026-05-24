@@ -9,8 +9,10 @@ const NAV_LINKS = [
   { href: "/",           label: "Dashboard",  icon: "🏠", tab: true  },
   { href: "/receipts",   label: "Receipts",   icon: "🧾", tab: true  },
   { href: "/upload",     label: "Upload",     icon: "📸", tab: true  },
-  { href: "/analytics",  label: "Analytics",  icon: "📊", tab: true  },
+  { href: "/search",     label: "Search",     icon: "🔍", tab: true  },
+  { href: "/analytics",  label: "Analytics",  icon: "📊", tab: false },
   { href: "/budgets",    label: "Budgets",    icon: "💰", tab: false },
+  { href: "/recurring",  label: "Recurring",  icon: "🔁", tab: false },
   { href: "/warranties", label: "Warranties", icon: "🛡️", tab: false },
   { href: "/export",     label: "Export",     icon: "📤", tab: true  },
 ];

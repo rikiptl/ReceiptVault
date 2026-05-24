@@ -24,6 +24,7 @@ interface Receipt {
   total: string | null;
   currency: string;
   category: string | null;
+  notes: string | null;
   verified: boolean;
   ocrDone: boolean;
   createdAt: Date;
@@ -112,6 +113,13 @@ export default function ReceiptCard({ receipt: r, query = "", selectable = false
             </span>
           )}
         </div>
+      )}
+
+      {/* Notes snippet */}
+      {r.notes && (
+        <p className="text-[11px] text-gray-400 italic leading-snug line-clamp-2">
+          {r.notes}
+        </p>
       )}
 
       {/* Date + badges */}

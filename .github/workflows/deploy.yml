@@ -108,7 +108,13 @@ jobs:
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"recurringInterval\" TEXT;" \
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"warrantyExpiry\" TIMESTAMP(3);" \
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"reimbursable\" BOOLEAN NOT NULL DEFAULT false;" \
-              -c "CREATE TABLE IF NOT EXISTS \"budgets\" (\"id\" TEXT NOT NULL, \"category\" TEXT NOT NULL, \"monthlyLimit\" DOUBLE PRECISION NOT NULL, \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, \"updatedAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT \"budgets_pkey\" PRIMARY KEY (\"id\"), CONSTRAINT \"budgets_category_key\" UNIQUE (\"category\"));"
+              -c "CREATE TABLE IF NOT EXISTS \"budgets\" (\"id\" TEXT NOT NULL, \"category\" TEXT NOT NULL, \"monthlyLimit\" DOUBLE PRECISION NOT NULL, \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, \"updatedAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT \"budgets_pkey\" PRIMARY KEY (\"id\"), CONSTRAINT \"budgets_category_key\" UNIQUE (\"category\"));" \
+              -c "CREATE INDEX IF NOT EXISTS \"receipts_merchant_idx\" ON \"receipts\" (\"merchant\");" \
+              -c "CREATE INDEX IF NOT EXISTS \"receipts_category_idx\" ON \"receipts\" (\"category\");" \
+              -c "CREATE INDEX IF NOT EXISTS \"receipts_createdAt_idx\" ON \"receipts\" (\"createdAt\");" \
+              -c "CREATE INDEX IF NOT EXISTS \"receipts_isRecurring_idx\" ON \"receipts\" (\"isRecurring\");" \
+              -c "CREATE INDEX IF NOT EXISTS \"receipts_reimbursable_idx\" ON \"receipts\" (\"reimbursable\");" \
+              -c "CREATE INDEX IF NOT EXISTS \"receipts_tags_gin_idx\" ON \"receipts\" USING GIN (\"tags\");"
             echo "Migrations applied."
 
             # ── Firewall ─────────────────────────────────────────────────────
