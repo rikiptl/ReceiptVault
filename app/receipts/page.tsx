@@ -1,6 +1,6 @@
 import { db } from "@/lib/db";
 import Link from "next/link";
-import ReceiptCard from "@/components/ReceiptCard";
+import ReceiptsGrid from "@/components/ReceiptsGrid";
 
 export const dynamic = "force-dynamic";
 
@@ -297,11 +297,7 @@ export default async function ReceiptsPage({ searchParams }: PageProps) {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {receipts.map((r) => (
-              <ReceiptCard key={r.id} receipt={r} query={q} />
-            ))}
-          </div>
+          <ReceiptsGrid receipts={receipts} query={q} />
 
           {/* Pagination */}
           {totalPages > 1 && (

@@ -327,9 +327,12 @@ export default function EditReceiptForm({ receipt }: { receipt: Receipt }) {
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="btn-secondary text-red-600 hover:bg-red-50"
+          className="btn-secondary text-red-600 hover:bg-red-50 flex items-center gap-1.5"
         >
-          {deleting ? "..." : "🗑️"}
+          {deleting
+            ? <span className="inline-block w-3 h-3 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
+            : "🗑️"}
+          {deleting ? "Deleting…" : "Delete receipt"}
         </button>
       </div>
     </div>
