@@ -63,7 +63,7 @@ export async function uploadToGoogleDrive(
   });
 
   const boundary = `rv_boundary_${Date.now()}`;
-  const body = Buffer.concat([
+  const bodyBuf = Buffer.concat([
     Buffer.from(
       `--${boundary}\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n` +
       `${metadata}\r\n--${boundary}\r\nContent-Type: ${mimeType}\r\n\r\n`
@@ -80,7 +80,7 @@ export async function uploadToGoogleDrive(
         Authorization:   `Bearer ${token}`,
         "Content-Type":  `multipart/related; boundary="${boundary}"`,
       },
-      body,
+      body:   new Uint8Array(bodyBuf),
       signal: AbortSignal.timeout(60_000),
     }
   );
@@ -116,7 +116,7 @@ export async function uploadToDropbox(
         mute:        true,
       }),
     },
-    body:   buffer,
+    body:   new Uint8Array(buffer),
     signal: AbortSignal.timeout(60_000),
   });
 
