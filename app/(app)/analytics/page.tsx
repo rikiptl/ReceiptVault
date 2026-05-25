@@ -1,8 +1,8 @@
 import { db } from "@/lib/db";
-import SpendByCategory from "@/components/charts/SpendByCategory";
-import MonthlyTrend    from "@/components/charts/MonthlyTrend";
-import YearOverYear    from "@/components/charts/YearOverYear";
-import TopMerchants    from "@/components/charts/TopMerchants";
+import SpendByCategory  from "@/components/charts/SpendByCategory";
+import YearOverYear     from "@/components/charts/YearOverYear";
+import TopMerchants     from "@/components/charts/TopMerchants";
+import SpendingTimeline from "@/components/charts/SpendingTimeline";
 
 export const dynamic = "force-dynamic";
 
@@ -21,6 +21,7 @@ async function getAnalyticsData() {
   const byMonthKey:  Record<string, number>                          = {};
   const byMerchant:  Record<string, { total: number; count: number }> = {};
   const byCurrency:  Record<string, { total: number; count: number }> = {};
+  const categorySet  = new Set<string>();
 
   let totalSpend     = 0;
   let thisMonthSpend = 0;
@@ -42,6 +43,7 @@ async function getAnalyticsData() {
 
     // Category
     const cat = r.category ?? "Uncategorized";
+    categorySet.add(cat);
     byCategory[cat] ??= { total: 0, count: 0 };
     byCategory[cat].total += amount;
     byCategory[cat].count++;
@@ -99,6 +101,12 @@ async function getAnalyticsData() {
     count:    byCurrency[cur].count,
   }));
 
+  // Sorted category list for the timeline filter (by spend, top 8)
+  const topCategories = Object.entries(byCategory)
+    .sort((a, b) => b[1].total - a[1].total)
+    .slice(0, 8)
+    .map(([name]) => name);
+
   return {
     totalSpend:      Math.round(totalSpend * 100) / 100,
     thisMonthSpend:  Math.round(thisMonthSpend * 100) / 100,
@@ -113,6 +121,7 @@ async function getAnalyticsData() {
     merchantData,
     currencies,
     currencyData,
+    topCategories,
   };
 }
 
@@ -199,7 +208,10 @@ export default async function AnalyticsPage() {
             ))}
           </div>
 
-          {/* Row 1: Category pie + Monthly trend */}
+          {/* ── Hero: interactive spending timeline ── */}
+          <SpendingTimeline categories={data.topCategories} />
+
+          {/* Row 1: Category pie */}
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <ChartCard
               title="Spend by Category"
@@ -208,12 +220,15 @@ export default async function AnalyticsPage() {
               <SpendByCategory data={data.categoryData} />
             </ChartCard>
 
-            <ChartCard
-              title="Monthly Trend"
-              subtitle="Last 13 months"
-            >
-              <MonthlyTrend data={data.trendData} />
-            </ChartCard>
+            {/* Top merchants mini-list fills the right col on large screens */}
+            {data.merchantData.length > 0 && (
+              <ChartCard
+                title="Top Merchants"
+                subtitle={`Top ${Math.min(data.merchantData.length, 5)} by spend`}
+              >
+                <TopMerchants data={data.merchantData.slice(0, 5)} />
+              </ChartCard>
+            )}
           </div>
 
           {/* Row 2: Year-over-year */}
@@ -228,17 +243,7 @@ export default async function AnalyticsPage() {
             />
           </ChartCard>
 
-          {/* Row 3: Top merchants */}
-          {data.merchantData.length > 0 && (
-            <ChartCard
-              title="Top Merchants"
-              subtitle={`Top ${data.merchantData.length} by spend`}
-            >
-              <TopMerchants data={data.merchantData} />
-            </ChartCard>
-          )}
-
-          {/* Row 4: Currency breakdown (only when multiple currencies) */}
+          {/* Row 3: Currency breakdown (only when multiple currencies) */}
           {multiCurrency && (
             <ChartCard
               title="🌐 Spend by Currency"
