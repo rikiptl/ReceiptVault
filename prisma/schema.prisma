@@ -84,6 +84,32 @@ model Budget {
   @@map("budgets")
 }
 
+// Singleton row — always upserted with id="singleton"
+model AppSettings {
+  id String @id @default("singleton")
+
+  // ── Cloud sync ──────────────────────────────────────────────────────────────
+  googleDriveEnabled     Boolean @default(false)
+  googleDriveCredentials String  @default("") @db.Text  // service-account JSON
+  googleDriveFolderId    String  @default("")
+
+  dropboxEnabled Boolean @default(false)
+  dropboxToken   String  @default("")
+  dropboxFolder  String  @default("/ReceiptVault")
+
+  // ── Digest ───────────────────────────────────────────────────────────────────
+  slackWebhookUrl String @default("")
+
+  resendApiKey  String @default("")
+  digestFromEmail String @default("")
+  digestToEmail   String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("app_settings")
+}
+
 model Webhook {
   id        String   @id @default(uuid())
   url       String

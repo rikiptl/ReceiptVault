@@ -249,6 +249,40 @@ export default async function ExportPage({ searchParams }: PageProps) {
             </div>
             <span className="text-gray-500 font-bold text-sm">CSV ↓</span>
           </a>
+
+          {/* Accountant formats */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+            <a
+              href={`/api/export/quickbooks${qs ? "?" + qs : ""}`}
+              className="flex items-center gap-3 p-3 rounded-xl border border-blue-100 bg-blue-50 hover:bg-blue-100 transition-colors group"
+            >
+              <span className="text-xl">📘</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-blue-900 text-sm">QuickBooks Online</p>
+                <p className="text-xs text-blue-600 mt-0.5">CSV for QBO import</p>
+              </div>
+            </a>
+            <a
+              href={`/api/export/quickbooks${qs ? "?" + qs + "&format=iif" : "?format=iif"}`}
+              className="flex items-center gap-3 p-3 rounded-xl border border-indigo-100 bg-indigo-50 hover:bg-indigo-100 transition-colors group"
+            >
+              <span className="text-xl">🖥️</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-indigo-900 text-sm">QuickBooks Desktop</p>
+                <p className="text-xs text-indigo-600 mt-0.5">IIF file for QB Desktop</p>
+              </div>
+            </a>
+            <a
+              href={`/api/export/wave${qs ? "?" + qs : ""}`}
+              className="flex items-center gap-3 p-3 rounded-xl border border-purple-100 bg-purple-50 hover:bg-purple-100 transition-colors group"
+            >
+              <span className="text-xl">🌊</span>
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-purple-900 text-sm">Wave Accounting</p>
+                <p className="text-xs text-purple-600 mt-0.5">CSV for Wave import</p>
+              </div>
+            </a>
+          </div>
         </div>
       )}
 

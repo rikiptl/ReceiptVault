@@ -5,6 +5,7 @@ import { v4 as uuidv4 } from "uuid";
 import { db } from "@/lib/db";
 import { runOcr } from "@/lib/ocr";
 import { dispatchWebhook, receiptPayload } from "@/lib/webhooks";
+import { syncReceiptToCloud } from "@/lib/cloudsync";
 
 const UPLOAD_DIR = process.env.UPLOAD_PATH ?? path.join(process.cwd(), "uploads");
 const MAX_SIZE = 10 * 1024 * 1024; // 10 MB
@@ -95,8 +96,9 @@ export async function POST(req: NextRequest) {
       },
     });
 
-    // Fire receipt.created webhook
+    // Fire receipt.created webhook + cloud backup (both fire-and-forget)
     dispatchWebhook("receipt.created", receiptPayload(receipt as Record<string, unknown>));
+    syncReceiptToCloud(filename, file.type, buffer);
 
     // Run OCR in background — after it completes it will do field-level
     // duplicate detection (same merchant + total + date)
