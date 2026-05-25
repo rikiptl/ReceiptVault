@@ -1,4 +1,5 @@
 import { db } from "./db";
+import { dispatchWebhook, receiptPayload } from "./webhooks";
 
 const OCR_BASE_URL = process.env.OCR_BASE_URL ?? "http://localhost:11435/v1";
 
@@ -82,7 +83,7 @@ export async function runOcr(
     );
 
     // ── Update DB ─────────────────────────────────────────────────────────────
-    await db.receipt.update({
+    const updated = await db.receipt.update({
       where: { id: receiptId },
       data: {
         merchant,
@@ -103,6 +104,9 @@ export async function runOcr(
         ocrDone:       true,
       },
     });
+
+    // ── Fire webhook ──────────────────────────────────────────────────────────
+    dispatchWebhook("receipt.ocr_completed", receiptPayload(updated as Record<string, unknown>));
 
     console.log(
       `[OCR] ${receiptId} → merchant="${merchant}" total="${total}" ` +

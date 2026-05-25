@@ -18,6 +18,7 @@ const NAV_LINKS = [
   { href: "/recurring",  label: "Recurring",  icon: "🔁", tab: false },
   { href: "/warranties", label: "Warranties", icon: "🛡️", tab: false },
   { href: "/export",     label: "Export",     icon: "📤", tab: true  },
+  { href: "/settings",   label: "Settings",   icon: "⚙️", tab: false },
 ];
 
 export default function Navbar() {

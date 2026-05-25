@@ -83,3 +83,17 @@ model Budget {
 
   @@map("budgets")
 }
+
+model Webhook {
+  id        String   @id @default(uuid())
+  url       String
+  label     String   @default("")
+  secret    String   @default("")
+  // comma-separated events: receipt.created,receipt.ocr_completed,receipt.updated
+  events    String   @default("receipt.created,receipt.ocr_completed")
+  enabled   Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("webhooks")
+}

@@ -125,7 +125,8 @@ jobs:
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"paymentMethod\" TEXT;" \
               -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"storePhone\" TEXT;" \
               -c "CREATE TABLE IF NOT EXISTS \"projects\" (\"id\" TEXT NOT NULL, \"name\" TEXT NOT NULL, \"description\" TEXT, \"color\" TEXT NOT NULL DEFAULT '#22c55e', \"icon\" TEXT NOT NULL DEFAULT '📁', \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, \"updatedAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT \"projects_pkey\" PRIMARY KEY (\"id\"));" \
-              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"projectId\" TEXT;"
+              -c "ALTER TABLE receipts ADD COLUMN IF NOT EXISTS \"projectId\" TEXT;" \
+              -c "CREATE TABLE IF NOT EXISTS \"webhooks\" (\"id\" TEXT NOT NULL, \"url\" TEXT NOT NULL, \"label\" TEXT NOT NULL DEFAULT '', \"secret\" TEXT NOT NULL DEFAULT '', \"events\" TEXT NOT NULL DEFAULT 'receipt.created,receipt.ocr_completed', \"enabled\" BOOLEAN NOT NULL DEFAULT true, \"createdAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, \"updatedAt\" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP, CONSTRAINT \"webhooks_pkey\" PRIMARY KEY (\"id\"));"
             echo "Migrations applied."
 
             # ── Firewall ─────────────────────────────────────────────────────

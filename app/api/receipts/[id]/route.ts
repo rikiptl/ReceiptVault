@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { unlink } from "fs/promises";
 import { db } from "@/lib/db";
+import { dispatchWebhook, receiptPayload } from "@/lib/webhooks";
 
 interface Params {
   params: Promise<{ id: string }>;
@@ -50,6 +51,7 @@ export async function PATCH(req: NextRequest, { params }: Params) {
 
   try {
     const updated = await db.receipt.update({ where: { id }, data });
+    dispatchWebhook("receipt.updated", receiptPayload(updated as Record<string, unknown>));
     return NextResponse.json(updated);
   } catch {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
